@@ -82,6 +82,13 @@ const api = {
       return () => ipcRenderer.removeListener('notification:new', listener);
     },
   },
+  git: {
+    getInfo: (projectPath: string) => ipcRenderer.invoke('git:get-info', projectPath),
+    setRemote: (projectPath: string, url: string) => ipcRenderer.invoke('git:set-remote', projectPath, url),
+    push: (projectPath: string) => ipcRenderer.invoke('git:push', projectPath),
+    pull: (projectPath: string) => ipcRenderer.invoke('git:pull', projectPath),
+    commitAll: (projectPath: string, message: string) => ipcRenderer.invoke('git:commit-all', projectPath, message),
+  },
   mcp: {
     getConfig: (projectPath: string) => ipcRenderer.invoke('mcp:get-config', projectPath),
     saveConfig: (projectPath: string, config: any) => ipcRenderer.invoke('mcp:save-config', projectPath, config),

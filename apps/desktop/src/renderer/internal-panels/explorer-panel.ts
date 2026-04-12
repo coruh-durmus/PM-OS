@@ -45,6 +45,11 @@ export class ExplorerPanel {
       const row = this.createRow(node);
       container.appendChild(row);
 
+      // Show git info for top-level project directories
+      if (node.depth === 0 && node.entry.isDirectory) {
+        this.renderProjectGitInfo(node.entry.path, container);
+      }
+
       if (node.expanded && node.children) {
         const childContainer = document.createElement('div');
         this.renderNodes(node.children, childContainer);
@@ -136,6 +141,140 @@ export class ExplorerPanel {
     }
     // Re-render the whole tree
     await this.render();
+  }
+
+  private async renderProjectGitInfo(projectPath: string, container: HTMLElement): Promise<void> {
+    const info = await (window as any).pmOs.git.getInfo(projectPath);
+
+    const bar = document.createElement('div');
+    bar.style.cssText = 'padding: 4px 12px 8px 28px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 10px;';
+
+    // Branch badge
+    if (info.branch) {
+      const branch = document.createElement('span');
+      branch.style.cssText = 'padding: 1px 6px; background: var(--bg-surface); border-radius: 8px; color: var(--text-secondary);';
+      branch.textContent = '\u2387 ' + info.branch;
+      bar.appendChild(branch);
+    }
+
+    // Dirty/clean indicator
+    const status = document.createElement('span');
+    if (info.dirty) {
+      status.style.cssText = 'color: var(--warning);';
+      status.textContent = '\u25CF ' + info.modifiedCount + ' modified';
+    } else {
+      status.style.cssText = 'color: var(--success);';
+      status.textContent = '\u2713 clean';
+    }
+    bar.appendChild(status);
+
+    // Remote link
+    if (info.remote) {
+      const remote = document.createElement('span');
+      remote.style.cssText = 'color: var(--accent); cursor: pointer;';
+      // Parse GitHub URL for display
+      const displayUrl = info.remote
+        .replace('https://github.com/', '')
+        .replace('git@github.com:', '')
+        .replace('.git', '');
+      remote.textContent = '\u2197 ' + displayUrl;
+      remote.title = info.remote;
+      bar.appendChild(remote);
+    } else {
+      const noRemote = document.createElement('span');
+      noRemote.style.cssText = 'color: var(--text-muted); cursor: pointer;';
+      noRemote.textContent = '+ Connect to GitHub';
+      noRemote.addEventListener('click', async () => {
+        const url = prompt('Enter GitHub remote URL (e.g., https://github.com/user/repo.git):');
+        if (url) {
+          await (window as any).pmOs.git.setRemote(projectPath, url);
+          // Re-render to show the remote
+          this.render();
+        }
+      });
+      bar.appendChild(noRemote);
+    }
+
+    container.appendChild(bar);
+
+    // Contributors row (if any)
+    if (info.contributors && info.contributors.length > 0) {
+      const contribRow = document.createElement('div');
+      contribRow.style.cssText = 'padding: 0 12px 6px 28px; display: flex; gap: 4px; align-items: center; font-size: 10px; color: var(--text-muted);';
+
+      const label = document.createElement('span');
+      label.textContent = '\u{1F465}';
+      contribRow.appendChild(label);
+
+      for (const name of info.contributors.slice(0, 5)) {
+        const avatar = document.createElement('span');
+        avatar.style.cssText = 'padding: 1px 5px; background: var(--bg-surface); border-radius: 8px; font-size: 10px; color: var(--text-secondary);';
+        avatar.textContent = name;
+        avatar.title = name;
+        contribRow.appendChild(avatar);
+      }
+      if (info.contributors.length > 5) {
+        const more = document.createElement('span');
+        more.textContent = '+' + (info.contributors.length - 5) + ' more';
+        more.style.color = 'var(--text-muted)';
+        contribRow.appendChild(more);
+      }
+
+      container.appendChild(contribRow);
+    }
+
+    // Last commit (if any)
+    if (info.lastCommit) {
+      const commitRow = document.createElement('div');
+      commitRow.style.cssText = 'padding: 0 12px 8px 28px; font-size: 10px; color: var(--text-muted);';
+      commitRow.textContent = `${info.lastCommit.hash} ${info.lastCommit.message} \u2014 ${info.lastCommit.author}, ${info.lastCommit.timeAgo}`;
+      container.appendChild(commitRow);
+    }
+
+    // Action buttons (if remote is set)
+    if (info.remote) {
+      const actions = document.createElement('div');
+      actions.style.cssText = 'padding: 0 12px 10px 28px; display: flex; gap: 6px;';
+
+      const pushBtn = document.createElement('button');
+      pushBtn.textContent = '\u2191 Push';
+      pushBtn.style.cssText = 'padding: 2px 8px; font-size: 10px; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text-secondary); cursor: pointer;';
+      pushBtn.addEventListener('click', async () => {
+        pushBtn.textContent = '\u2191 Pushing...';
+        const result = await (window as any).pmOs.git.push(projectPath);
+        pushBtn.textContent = result.success ? '\u2713 Pushed' : '\u2717 Failed';
+        setTimeout(() => { pushBtn.textContent = '\u2191 Push'; }, 2000);
+      });
+      actions.appendChild(pushBtn);
+
+      const pullBtn = document.createElement('button');
+      pullBtn.textContent = '\u2193 Pull';
+      pullBtn.style.cssText = pushBtn.style.cssText;
+      pullBtn.addEventListener('click', async () => {
+        pullBtn.textContent = '\u2193 Pulling...';
+        const result = await (window as any).pmOs.git.pull(projectPath);
+        pullBtn.textContent = result.success ? '\u2713 Pulled' : '\u2717 Failed';
+        setTimeout(() => { pullBtn.textContent = '\u2193 Pull'; this.render(); }, 2000);
+      });
+      actions.appendChild(pullBtn);
+
+      if (info.dirty) {
+        const commitBtn = document.createElement('button');
+        commitBtn.textContent = '\u2713 Commit All';
+        commitBtn.style.cssText = pushBtn.style.cssText;
+        commitBtn.addEventListener('click', async () => {
+          const msg = prompt('Commit message:', 'Update project');
+          if (!msg) return;
+          commitBtn.textContent = 'Committing...';
+          const result = await (window as any).pmOs.git.commitAll(projectPath, msg);
+          commitBtn.textContent = result.success ? '\u2713 Committed' : '\u2717 Failed';
+          setTimeout(() => this.render(), 1500);
+        });
+        actions.appendChild(commitBtn);
+      }
+
+      container.appendChild(actions);
+    }
   }
 
   private openFile(entry: FileEntry): void {

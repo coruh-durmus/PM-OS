@@ -297,4 +297,95 @@ export function registerIpcHandlers(
         .map((d: any) => ({ name: d.name, path: p.join(wsPath, d.name) }));
     } catch { return []; }
   });
+
+  // Git info handlers
+  ipcMain.handle('git:get-info', async (_e, projectPath: string) => {
+    const { execFileSync } = require('child_process');
+    const info: any = { branch: null, remote: null, dirty: false, modifiedCount: 0, lastCommit: null, contributors: [] };
+
+    try {
+      // Current branch
+      info.branch = execFileSync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { cwd: projectPath, encoding: 'utf-8' }).trim();
+    } catch {}
+
+    try {
+      // Remote URL
+      info.remote = execFileSync('git', ['remote', 'get-url', 'origin'], { cwd: projectPath, encoding: 'utf-8' }).trim();
+    } catch {}
+
+    try {
+      // Status — count modified files
+      const status = execFileSync('git', ['status', '--porcelain'], { cwd: projectPath, encoding: 'utf-8' }).trim();
+      const lines = status ? status.split('\n') : [];
+      info.modifiedCount = lines.length;
+      info.dirty = lines.length > 0;
+    } catch {}
+
+    try {
+      // Last commit
+      const log = execFileSync('git', ['log', '-1', '--format=%H|%an|%ar|%s'], { cwd: projectPath, encoding: 'utf-8' }).trim();
+      if (log) {
+        const [hash, author, timeAgo, message] = log.split('|');
+        info.lastCommit = { hash: hash?.slice(0, 7), author, timeAgo, message };
+      }
+    } catch {}
+
+    try {
+      // Contributors (unique authors from git log, last 50 commits)
+      const authors = execFileSync('git', ['log', '--format=%an', '-50'], { cwd: projectPath, encoding: 'utf-8' }).trim();
+      if (authors) {
+        const unique = [...new Set(authors.split('\n').filter(Boolean))];
+        info.contributors = unique.slice(0, 10);
+      }
+    } catch {}
+
+    return info;
+  });
+
+  ipcMain.handle('git:set-remote', async (_e, projectPath: string, remoteUrl: string) => {
+    const { execFileSync } = require('child_process');
+    try {
+      // Check if origin exists
+      try {
+        execFileSync('git', ['remote', 'get-url', 'origin'], { cwd: projectPath, encoding: 'utf-8' });
+        // Origin exists, update it
+        execFileSync('git', ['remote', 'set-url', 'origin', remoteUrl], { cwd: projectPath, encoding: 'utf-8' });
+      } catch {
+        // No origin, add it
+        execFileSync('git', ['remote', 'add', 'origin', remoteUrl], { cwd: projectPath, encoding: 'utf-8' });
+      }
+      return true;
+    } catch { return false; }
+  });
+
+  ipcMain.handle('git:push', async (_e, projectPath: string) => {
+    const { execFileSync } = require('child_process');
+    try {
+      execFileSync('git', ['push', '-u', 'origin', 'HEAD'], { cwd: projectPath, encoding: 'utf-8', timeout: 30000 });
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.stderr?.toString() || err.message };
+    }
+  });
+
+  ipcMain.handle('git:pull', async (_e, projectPath: string) => {
+    const { execFileSync } = require('child_process');
+    try {
+      const output = execFileSync('git', ['pull', '--rebase'], { cwd: projectPath, encoding: 'utf-8', timeout: 30000 });
+      return { success: true, output };
+    } catch (err: any) {
+      return { success: false, error: err.stderr?.toString() || err.message };
+    }
+  });
+
+  ipcMain.handle('git:commit-all', async (_e, projectPath: string, message: string) => {
+    const { execFileSync } = require('child_process');
+    try {
+      execFileSync('git', ['add', '-A'], { cwd: projectPath, encoding: 'utf-8' });
+      execFileSync('git', ['commit', '-m', message], { cwd: projectPath, encoding: 'utf-8' });
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.stderr?.toString() || err.message };
+    }
+  });
 }
