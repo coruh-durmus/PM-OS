@@ -10,10 +10,20 @@
 <body>
   <div id="app">
     <aside id="sidebar"></aside>
-    <main id="panel-area">
-      <nav id="tab-bar"></nav>
-      <div id="panel-container"></div>
-    </main>
+    <div id="main-area">
+      <main id="panel-area">
+        <nav id="tab-bar"></nav>
+        <div id="panel-container"></div>
+      </main>
+      <div id="bottom-panel" class="hidden">
+        <div id="bottom-panel-resize-handle"></div>
+        <div id="bottom-panel-header">
+          <span id="bottom-panel-title">Terminal</span>
+          <button id="bottom-panel-close">&times;</button>
+        </div>
+        <div id="bottom-panel-content"></div>
+      </div>
+    </div>
     <footer id="status-bar"></footer>
   </div>
   <div id="command-palette" class="hidden"></div>

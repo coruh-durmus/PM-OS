@@ -1,10 +1,12 @@
 import type { TabBar } from '../panels/tab-bar';
+import type { BottomPanel } from '../bottom-panel/bottom-panel';
 
 interface SidebarItem {
   id: string;
   title: string;
   icon: string;
   url?: string;
+  action?: 'toggle-terminal';
 }
 
 const workspaceItems: SidebarItem[] = [
@@ -15,7 +17,7 @@ const workspaceItems: SidebarItem[] = [
 
 const toolItems: SidebarItem[] = [
   { id: 'ai-assistant', title: 'AI Assistant', icon: '\u{2728}' },
-  { id: 'terminal', title: 'Terminal', icon: '>' },
+  { id: 'terminal', title: 'Terminal', icon: '>', action: 'toggle-terminal' },
   { id: 'projects', title: 'Projects', icon: '\u{1F4C1}' },
   { id: 'automations', title: 'Automations', icon: '\u{26A1}' },
 ];
@@ -23,10 +25,12 @@ const toolItems: SidebarItem[] = [
 export class Sidebar {
   private el: HTMLElement;
   private tabBar: TabBar;
+  private bottomPanel: BottomPanel;
 
-  constructor(el: HTMLElement, tabBar: TabBar) {
+  constructor(el: HTMLElement, tabBar: TabBar, bottomPanel: BottomPanel) {
     this.el = el;
     this.tabBar = tabBar;
+    this.bottomPanel = bottomPanel;
   }
 
   render(): void {
@@ -71,7 +75,11 @@ export class Sidebar {
       el.appendChild(label);
 
       el.addEventListener('click', () => {
-        this.tabBar.openTab(item.id, item.title, item.url);
+        if (item.action === 'toggle-terminal') {
+          this.bottomPanel.toggle();
+        } else {
+          this.tabBar.openTab(item.id, item.title, item.url);
+        }
       });
 
       list.appendChild(el);

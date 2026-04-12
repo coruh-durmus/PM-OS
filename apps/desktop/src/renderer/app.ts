@@ -3,6 +3,7 @@ import { TabBar } from './panels/tab-bar';
 import { PanelContainer } from './panels/panel-container';
 import { CommandPalette } from './command-palette/command-palette';
 import { StatusBar } from './status-bar/status-bar';
+import { BottomPanel } from './bottom-panel/bottom-panel';
 
 export class App {
   private sidebar!: Sidebar;
@@ -10,6 +11,7 @@ export class App {
   private panelContainer!: PanelContainer;
   private commandPalette!: CommandPalette;
   private statusBar!: StatusBar;
+  private bottomPanel!: BottomPanel;
 
   init(): void {
     this.panelContainer = new PanelContainer(
@@ -21,14 +23,20 @@ export class App {
       this.panelContainer,
     );
 
+    this.bottomPanel = new BottomPanel(
+      document.getElementById('bottom-panel')!,
+    );
+
     this.sidebar = new Sidebar(
       document.getElementById('sidebar')!,
       this.tabBar,
+      this.bottomPanel,
     );
 
     this.commandPalette = new CommandPalette(
       document.getElementById('command-palette')!,
       this.tabBar,
+      this.bottomPanel,
     );
 
     this.statusBar = new StatusBar(
@@ -44,15 +52,13 @@ export class App {
 
   private bindKeyboard(): void {
     document.addEventListener('keydown', (e) => {
-      // Cmd+P / Ctrl+P toggles command palette
       if ((e.metaKey || e.ctrlKey) && e.key === 'p') {
         e.preventDefault();
         this.commandPalette.toggle();
       }
-      // Ctrl+` opens terminal
       if (e.ctrlKey && e.key === '`') {
         e.preventDefault();
-        this.tabBar.openTab('terminal', 'Terminal');
+        this.bottomPanel.toggle();
       }
     });
   }

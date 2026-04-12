@@ -19,11 +19,19 @@
   overflow-x: hidden;
 }
 
-#panel-area {
+#main-area {
   grid-area: main;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+#panel-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 100px;
 }
 
 #tab-bar {
@@ -43,6 +51,77 @@
   position: relative;
   overflow: hidden;
   background: var(--bg-primary);
+}
+
+/* Bottom Panel (Terminal) — VS Code style */
+#bottom-panel {
+  display: flex;
+  flex-direction: column;
+  height: 280px;
+  min-height: 100px;
+  max-height: 70vh;
+  background: var(--bg-primary);
+  border-top: 1px solid var(--border);
+}
+
+#bottom-panel.hidden {
+  display: none;
+}
+
+#bottom-panel-resize-handle {
+  height: 4px;
+  cursor: ns-resize;
+  background: transparent;
+  flex-shrink: 0;
+}
+
+#bottom-panel-resize-handle:hover {
+  background: var(--accent);
+}
+
+#bottom-panel-header {
+  height: 28px;
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+  user-select: none;
+}
+
+#bottom-panel-title {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+}
+
+#bottom-panel-close {
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+#bottom-panel-close:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+#bottom-panel-content {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
 }
 
 #status-bar {

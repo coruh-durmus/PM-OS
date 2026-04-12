@@ -1,4 +1,5 @@
 import type { TabBar } from '../panels/tab-bar';
+import type { BottomPanel } from '../bottom-panel/bottom-panel';
 
 interface Command {
   id: string;
@@ -10,15 +11,17 @@ interface Command {
 export class CommandPalette {
   private el: HTMLElement;
   private tabBar: TabBar;
+  private bottomPanel: BottomPanel;
   private commands: Command[] = [];
   private filteredCommands: Command[] = [];
   private selectedIndex = 0;
   private inputEl!: HTMLInputElement;
   private resultsEl!: HTMLElement;
 
-  constructor(el: HTMLElement, tabBar: TabBar) {
+  constructor(el: HTMLElement, tabBar: TabBar, bottomPanel: BottomPanel) {
     this.el = el;
     this.tabBar = tabBar;
+    this.bottomPanel = bottomPanel;
     this.setupCommands();
     this.buildDom();
     this.bindEvents();
@@ -72,9 +75,9 @@ export class CommandPalette {
       },
       {
         id: 'open-terminal',
-        title: 'Open Terminal',
+        title: 'Toggle Terminal',
         category: 'Tools',
-        action: () => this.tabBar.openTab('terminal', 'Terminal'),
+        action: () => this.bottomPanel.toggle(),
       },
       {
         id: 'open-projects',
