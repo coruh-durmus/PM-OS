@@ -48,6 +48,26 @@ const api = {
       return () => ipcRenderer.removeListener('wcv:open-url', listener);
     },
   },
+  project: {
+    list: () => ipcRenderer.invoke('project:list'),
+    create: (name: string) => ipcRenderer.invoke('project:create', name),
+    delete: (name: string) => ipcRenderer.invoke('project:delete', name),
+    getConfig: (path: string) => ipcRenderer.invoke('project:get-config', path),
+    getLinks: (path: string) => ipcRenderer.invoke('project:get-links', path),
+    addLink: (path: string, link: any) => ipcRenderer.invoke('project:add-link', path, link),
+    removeLink: (path: string, linkId: string) => ipcRenderer.invoke('project:remove-link', path, linkId),
+    getDecisions: (path: string) => ipcRenderer.invoke('project:get-decisions', path),
+    addDecision: (path: string, entry: any) => ipcRenderer.invoke('project:add-decision', path, entry),
+  },
+  fs: {
+    readDir: (dirPath: string) => ipcRenderer.invoke('fs:read-dir', dirPath),
+    readFile: (filePath: string) => ipcRenderer.invoke('fs:read-file', filePath),
+    writeFile: (filePath: string, content: string) => ipcRenderer.invoke('fs:write-file', filePath, content),
+    getWorkspacePath: () => ipcRenderer.invoke('fs:get-workspace-path'),
+  },
+  workspace: {
+    ensureClaudeMd: () => ipcRenderer.invoke('workspace:ensure-claude-md'),
+  },
   dialog: {
     openDirectory(): Promise<string | null> {
       return ipcRenderer.invoke('dialog:open-directory');

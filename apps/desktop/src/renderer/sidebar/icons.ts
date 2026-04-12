@@ -1,0 +1,20 @@
+// SVG icons for the activity bar — each returns an SVG string
+export const icons: Record<string, string> = {
+  slack: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2a2.5 2.5 0 0 0 0 5H17V4.5A2.5 2.5 0 0 0 14.5 2z"/><path d="M7 7h5v5H7z" fill="currentColor" opacity="0.15"/><path d="M9.5 7A2.5 2.5 0 0 0 7 4.5 2.5 2.5 0 0 0 4.5 7H7"/><path d="M7 9.5A2.5 2.5 0 0 0 4.5 7 2.5 2.5 0 0 0 2 9.5 2.5 2.5 0 0 0 4.5 12H7V9.5z"/><path d="M7 14.5A2.5 2.5 0 0 0 9.5 17a2.5 2.5 0 0 0 0-5H7v2.5z"/><path d="M12 14.5a2.5 2.5 0 0 0 2.5 2.5 2.5 2.5 0 0 0 2.5-2.5V12h-2.5a2.5 2.5 0 0 0-2.5 2.5z"/><path d="M17 9.5a2.5 2.5 0 0 0-2.5-2.5 2.5 2.5 0 0 0 0 5H17V9.5z"/><path d="M9.5 22a2.5 2.5 0 0 0 0-5H7v2.5A2.5 2.5 0 0 0 9.5 22z"/><path d="M12 17v2.5a2.5 2.5 0 0 0 5 0 2.5 2.5 0 0 0-5 0z"/></svg>`,
+
+  notion: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M4.459 4.208c.746.606 1.026.56 2.428.466l13.215-.793c.28 0 .047-.28-.046-.326L18.29 2.094c-.466-.373-.979-.56-2.054-.466l-12.78.793c-.466.047-.559.28-.372.466l1.375 1.32zm.793 2.707v13.868c0 .746.373 1.027 1.214.98l14.523-.84c.84-.046.933-.559.933-1.166V5.822c0-.606-.233-.933-.746-.886l-15.177.84c-.56.047-.747.327-.747.886v1.053zm14.337.373c.093.42 0 .84-.42.886l-.7.14v10.264c-.606.327-1.166.513-1.632.513-.746 0-.933-.233-1.493-.933l-4.571-7.176v6.95l1.446.327s0 .84-1.166.84l-3.219.187c-.093-.187 0-.653.327-.746l.84-.233V8.685l-1.166-.093c-.093-.42.14-1.026.793-1.073l3.452-.233 4.758 7.27v-6.44l-1.213-.14c-.093-.513.28-.886.746-.933l3.219-.187z"/></svg>`,
+
+  figma: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 5.5A3.5 3.5 0 0 1 8.5 2H12v7H8.5A3.5 3.5 0 0 1 5 5.5z"/><path d="M12 2h3.5a3.5 3.5 0 1 1 0 7H12V2z"/><path d="M12 12.5a3.5 3.5 0 1 1 7 0 3.5 3.5 0 1 1-7 0z"/><path d="M5 19.5A3.5 3.5 0 0 1 8.5 16H12v3.5a3.5 3.5 0 1 1-7 0z"/><path d="M5 12.5A3.5 3.5 0 0 1 8.5 9H12v7H8.5A3.5 3.5 0 0 1 5 12.5z"/></svg>`,
+
+  browser: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10A15.3 15.3 0 0 1 12 2z"/></svg>`,
+
+  'ai-assistant': `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.09 6.26L20 10l-5.91 1.74L12 18l-2.09-6.26L4 10l5.91-1.74L12 2z"/><path d="M17 17l1.5 4.5L22 20l-1.5-4.5" opacity="0.4"/><path d="M2 20l3.5-1.5L7 23l-1.5-3.5" opacity="0.4"/></svg>`,
+
+  terminal: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>`,
+
+  projects: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>`,
+
+  automations: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`,
+
+  settings: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
+};

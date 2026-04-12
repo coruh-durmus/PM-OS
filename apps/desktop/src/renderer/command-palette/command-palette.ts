@@ -1,7 +1,7 @@
 import type { TabBar } from '../panels/tab-bar';
 import type { BottomPanel } from '../bottom-panel/bottom-panel';
 
-interface Command {
+export interface Command {
   id: string;
   title: string;
   category: string;
@@ -25,6 +25,10 @@ export class CommandPalette {
     this.setupCommands();
     this.buildDom();
     this.bindEvents();
+  }
+
+  addCommand(command: Command): void {
+    this.commands.push(command);
   }
 
   toggle(): void {

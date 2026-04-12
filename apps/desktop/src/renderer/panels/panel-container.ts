@@ -1,3 +1,7 @@
+import { ProjectsPanel } from '../internal-panels/projects-panel';
+import { AiPanel } from '../internal-panels/ai-panel';
+import { AutomationsPanel } from '../internal-panels/automations-panel';
+
 interface PanelEntry {
   id: string;
   isWcv: boolean;
@@ -166,27 +170,42 @@ export class PanelContainer {
 
   private buildInternalPanel(id: string): HTMLElement {
     const wrapper = document.createElement('div');
-    wrapper.className = 'panel-internal';
+    wrapper.style.cssText = 'position: absolute; inset: 0; overflow: hidden;';
 
-    const content = document.createElement('div');
-    content.className = 'panel-internal-content';
+    switch (id) {
+      case 'projects': {
+        const panel = new ProjectsPanel(wrapper);
+        panel.render();
+        break;
+      }
+      case 'ai-assistant': {
+        const panel = new AiPanel(wrapper);
+        panel.render();
+        break;
+      }
+      case 'automations': {
+        const panel = new AutomationsPanel(wrapper);
+        panel.render();
+        break;
+      }
+      default: {
+        // Generic fallback for unknown panels
+        wrapper.style.cssText =
+          'position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;';
+        const content = document.createElement('div');
+        content.style.cssText = 'text-align: center; color: var(--text-muted);';
+        const fallbackIcon = document.createElement('div');
+        fallbackIcon.style.cssText = 'font-size: 32px; margin-bottom: 8px;';
+        fallbackIcon.textContent = '\u{1F6E0}';
+        content.appendChild(fallbackIcon);
+        const fallbackName = document.createElement('div');
+        fallbackName.style.fontWeight = '500';
+        fallbackName.textContent = id;
+        content.appendChild(fallbackName);
+        wrapper.appendChild(content);
+      }
+    }
 
-    const icon = document.createElement('div');
-    icon.className = 'panel-internal-icon';
-    icon.textContent = '\u{1F6E0}';
-    content.appendChild(icon);
-
-    const title = document.createElement('div');
-    title.className = 'panel-internal-title';
-    title.textContent = id;
-    content.appendChild(title);
-
-    const subtitle = document.createElement('div');
-    subtitle.className = 'panel-internal-subtitle';
-    subtitle.textContent = `This panel will be available when the ${id} extension is installed.`;
-    content.appendChild(subtitle);
-
-    wrapper.appendChild(content);
     return wrapper;
   }
 }

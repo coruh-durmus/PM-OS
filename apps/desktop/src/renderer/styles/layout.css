@@ -1,22 +1,27 @@
 #app {
   display: grid;
-  grid-template-columns: var(--sidebar-width) 1fr;
+  grid-template-columns: 48px 1fr;
   grid-template-rows: 1fr var(--status-bar-height);
   grid-template-areas:
-    "sidebar main"
-    "status  status";
+    "actbar main"
+    "status status";
   height: 100vh;
   width: 100vw;
 }
 
 #sidebar {
-  grid-area: sidebar;
+  display: none;
+}
+
+#activity-bar {
+  grid-area: actbar;
   background: var(--bg-secondary);
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
-  overflow-x: hidden;
+  align-items: center;
+  padding-top: 42px; /* clear macOS traffic lights */
+  overflow: hidden;
 }
 
 #main-area {
@@ -147,5 +152,9 @@
 }
 
 #command-palette.hidden {
+  display: none;
+}
+
+.theme-picker.hidden {
   display: none;
 }

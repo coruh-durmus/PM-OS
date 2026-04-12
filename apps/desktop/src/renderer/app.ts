@@ -4,6 +4,8 @@ import { PanelContainer } from './panels/panel-container';
 import { CommandPalette } from './command-palette/command-palette';
 import { StatusBar } from './status-bar/status-bar';
 import { BottomPanel } from './bottom-panel/bottom-panel';
+import { ThemeManager } from './themes/theme-manager';
+import { ThemePicker } from './themes/theme-picker';
 
 export class App {
   private sidebar!: Sidebar;
@@ -12,6 +14,8 @@ export class App {
   private commandPalette!: CommandPalette;
   private statusBar!: StatusBar;
   private bottomPanel!: BottomPanel;
+  private themeManager!: ThemeManager;
+  private themePicker!: ThemePicker;
 
   init(): void {
     this.panelContainer = new PanelContainer(
@@ -28,7 +32,7 @@ export class App {
     );
 
     this.sidebar = new Sidebar(
-      document.getElementById('sidebar')!,
+      document.getElementById('activity-bar')!,
       this.tabBar,
       this.bottomPanel,
     );
@@ -42,6 +46,16 @@ export class App {
     this.statusBar = new StatusBar(
       document.getElementById('status-bar')!,
     );
+
+    this.themeManager = new ThemeManager();
+    this.themePicker = new ThemePicker(this.themeManager);
+
+    this.commandPalette.addCommand({
+      id: 'change-theme',
+      title: 'Preferences: Color Theme',
+      category: 'Settings',
+      action: () => this.themePicker.toggle(),
+    });
 
     // Intercept links from embedded panels → open in Browser tab
     window.pmOs.wcv.onOpenUrl(({ url }: { url: string }) => {
@@ -64,6 +78,10 @@ export class App {
       if (e.ctrlKey && e.key === '`') {
         e.preventDefault();
         this.bottomPanel.toggle();
+      }
+      if (e.ctrlKey && e.shiftKey && e.key === 'T') {
+        e.preventDefault();
+        this.themePicker.toggle();
       }
     });
   }
