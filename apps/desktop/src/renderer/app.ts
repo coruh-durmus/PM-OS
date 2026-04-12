@@ -10,6 +10,7 @@ import { NotificationCenter } from './notification-center/notification-center';
 import { SidebarPanel } from './sidebar-panel/sidebar-panel';
 import { McpHealthChecker } from './internal-panels/mcp-health.js';
 import { Onboarding } from './onboarding/onboarding';
+import { MeetingMonitor } from './meeting-monitor/meeting-monitor.js';
 
 export class App {
   private sidebar!: Sidebar;
@@ -106,6 +107,9 @@ export class App {
     this.panelContainer.render();
     this.statusBar.render();
 
+    // Start meeting monitor
+    const meetingMonitor = new MeetingMonitor();
+
     // Check MCP health after 5 seconds
     const mcpChecker = new McpHealthChecker();
     setTimeout(() => mcpChecker.checkAndNotify(), 5000);
@@ -131,16 +135,16 @@ export class App {
       }
 
       // CMD+1-9 hotkeys for quick app switching
-      const appHotkeys = ['slack', 'notion', 'figma', 'gmail', 'jira', 'confluence', 'browser'];
-      const appNames = ['Slack', 'Notion', 'Figma', 'Gmail', 'Jira', 'Confluence', 'Browser'];
+      const appHotkeys = ['slack', 'notion', 'figma', 'gmail', 'calendar', 'jira', 'confluence', 'browser'];
+      const appNames = ['Slack', 'Notion', 'Figma', 'Gmail', 'Calendar', 'Jira', 'Confluence', 'Browser'];
       const appUrls = [
         'https://app.slack.com', 'https://www.notion.so', 'https://www.figma.com',
-        'https://mail.google.com', 'https://www.atlassian.com/software/jira',
+        'https://mail.google.com', 'https://calendar.google.com', 'https://www.atlassian.com/software/jira',
         'https://www.atlassian.com/software/confluence', 'https://www.google.com'
       ];
 
       for (let i = 0; i < appHotkeys.length; i++) {
-        // Check for Cmd+1 through Cmd+7
+        // Check for Cmd+1 through Cmd+8
         if ((e.metaKey || e.ctrlKey) && e.key === String(i + 1)) {
           e.preventDefault();
           this.tabBar.openTab(appHotkeys[i], appNames[i], appUrls[i]);

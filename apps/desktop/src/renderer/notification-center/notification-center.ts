@@ -124,6 +124,9 @@ export class NotificationCenter {
     header.appendChild(actions);
     this.el.appendChild(header);
 
+    // Meetings section
+    this.renderMeetingsSection();
+
     // Settings section (collapsible)
     const settingsSection = document.createElement('div');
     settingsSection.style.cssText = 'padding: 8px 16px; border-bottom: 1px solid var(--border);';
@@ -243,6 +246,143 @@ export class NotificationCenter {
       }
     };
     setTimeout(() => document.addEventListener('click', closeOnOutside), 100);
+  }
+
+  private renderMeetingsSection(): void {
+    const section = document.createElement('div');
+    section.style.cssText = 'padding: 8px 16px; border-bottom: 1px solid var(--border);';
+
+    const sectionHeader = document.createElement('div');
+    sectionHeader.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;';
+
+    const sectionTitle = document.createElement('span');
+    sectionTitle.style.cssText = 'font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;';
+    sectionTitle.textContent = '\uD83D\uDCC5 Upcoming Meetings';
+    sectionHeader.appendChild(sectionTitle);
+
+    const addBtn = document.createElement('button');
+    addBtn.textContent = '+ Add';
+    addBtn.style.cssText = 'background: none; border: none; color: var(--accent); cursor: pointer; font-size: 11px; font-weight: 600;';
+    addBtn.addEventListener('click', () => {
+      this.showAddMeetingForm(section);
+    });
+    sectionHeader.appendChild(addBtn);
+    section.appendChild(sectionHeader);
+
+    // List upcoming meetings from localStorage
+    let meetings: { id: string; title: string; startTime: number; meetingUrl: string }[] = [];
+    try {
+      const raw = localStorage.getItem('pm-os-meetings');
+      if (raw) meetings = JSON.parse(raw);
+    } catch {}
+
+    const now = Date.now();
+    const upcoming = meetings
+      .filter(m => m.startTime > now - 3600000)
+      .sort((a, b) => a.startTime - b.startTime);
+
+    if (upcoming.length === 0) {
+      const empty = document.createElement('div');
+      empty.style.cssText = 'font-size: 11px; color: var(--text-muted); padding: 4px 0;';
+      empty.textContent = 'No upcoming meetings';
+      section.appendChild(empty);
+    } else {
+      for (const meeting of upcoming) {
+        const row = document.createElement('div');
+        row.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 4px 0; gap: 8px;';
+
+        const info = document.createElement('div');
+        info.style.cssText = 'flex: 1; min-width: 0;';
+
+        const titleEl = document.createElement('div');
+        titleEl.textContent = meeting.title;
+        titleEl.style.cssText = 'font-size: 12px; font-weight: 500; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;';
+        info.appendChild(titleEl);
+
+        const timeEl = document.createElement('div');
+        timeEl.textContent = new Date(meeting.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        timeEl.style.cssText = 'font-size: 10px; color: var(--text-muted);';
+        info.appendChild(timeEl);
+
+        row.appendChild(info);
+
+        if (meeting.meetingUrl) {
+          const joinBtn = document.createElement('button');
+          joinBtn.textContent = 'Join';
+          joinBtn.style.cssText = 'padding: 2px 8px; background: var(--success); color: #1e1e2e; border: none; border-radius: var(--radius-sm); cursor: pointer; font-size: 10px; font-weight: 600; flex-shrink: 0;';
+          joinBtn.addEventListener('click', () => {
+            window.open(meeting.meetingUrl, '_blank');
+          });
+          row.appendChild(joinBtn);
+        }
+
+        section.appendChild(row);
+      }
+    }
+
+    this.el.appendChild(section);
+  }
+
+  private showAddMeetingForm(container: HTMLElement): void {
+    // Remove existing form if any
+    const existing = container.querySelector('.meeting-add-form');
+    if (existing) {
+      existing.remove();
+      return;
+    }
+
+    const form = document.createElement('div');
+    form.className = 'meeting-add-form';
+    form.style.cssText = 'margin-top: 8px; display: flex; flex-direction: column; gap: 6px;';
+
+    const titleInput = document.createElement('input');
+    titleInput.type = 'text';
+    titleInput.placeholder = 'Meeting title';
+    titleInput.style.cssText = 'padding: 6px 8px; background: var(--bg-input, var(--bg-hover)); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text-primary); font-size: 12px; outline: none;';
+    form.appendChild(titleInput);
+
+    const dateInput = document.createElement('input');
+    dateInput.type = 'datetime-local';
+    dateInput.style.cssText = 'padding: 6px 8px; background: var(--bg-input, var(--bg-hover)); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text-primary); font-size: 12px; outline: none;';
+    form.appendChild(dateInput);
+
+    const urlInput = document.createElement('input');
+    urlInput.type = 'text';
+    urlInput.placeholder = 'Meeting URL (optional)';
+    urlInput.style.cssText = 'padding: 6px 8px; background: var(--bg-input, var(--bg-hover)); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text-primary); font-size: 12px; outline: none;';
+    form.appendChild(urlInput);
+
+    const saveBtn = document.createElement('button');
+    saveBtn.textContent = 'Save';
+    saveBtn.style.cssText = 'padding: 6px 12px; background: var(--accent); color: #1e1e2e; border: none; border-radius: var(--radius-sm); cursor: pointer; font-size: 12px; font-weight: 600;';
+    saveBtn.addEventListener('click', () => {
+      const title = titleInput.value.trim();
+      const dateVal = dateInput.value;
+      if (!title || !dateVal) return;
+
+      const startTime = new Date(dateVal).getTime();
+      const meetingUrl = urlInput.value.trim();
+
+      let meetings: { id: string; title: string; startTime: number; meetingUrl: string }[] = [];
+      try {
+        const raw = localStorage.getItem('pm-os-meetings');
+        if (raw) meetings = JSON.parse(raw);
+      } catch {}
+
+      meetings.push({
+        id: 'meeting-' + Date.now(),
+        title,
+        startTime,
+        meetingUrl,
+      });
+
+      localStorage.setItem('pm-os-meetings', JSON.stringify(meetings));
+      this.render();
+    });
+    form.appendChild(saveBtn);
+
+    container.appendChild(form);
+    titleInput.focus();
   }
 
   private formatTime(timestamp: number): string {

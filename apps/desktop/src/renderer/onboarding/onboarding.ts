@@ -23,6 +23,7 @@ const APPS: AppOption[] = [
   { id: 'notion', name: 'Notion', svg: sidebarIcons.notion, color: '#ffffff' },
   { id: 'figma', name: 'Figma', svg: sidebarIcons.figma, color: '#a259ff' },
   { id: 'gmail', name: 'Gmail', svg: sidebarIcons.gmail, color: '#ea4335' },
+  { id: 'calendar', name: 'Google Calendar', svg: sidebarIcons.calendar, color: '#4285f4' },
   { id: 'jira', name: 'Jira', svg: sidebarIcons.jira, color: '#0052cc' },
   { id: 'confluence', name: 'Confluence', svg: sidebarIcons.confluence, color: '#1868db' },
   { id: 'browser', name: 'Browser', svg: sidebarIcons.browser, color: '#89b4fa' },

@@ -84,6 +84,12 @@ export class CommandPalette {
         action: () => this.tabBar.openTab('gmail', 'Gmail', 'https://mail.google.com'),
       },
       {
+        id: 'open-calendar',
+        title: 'Open Calendar',
+        category: 'Workspace',
+        action: () => this.tabBar.openTab('calendar', 'Calendar', 'https://calendar.google.com'),
+      },
+      {
         id: 'open-jira',
         title: 'Open Jira',
         category: 'Workspace',

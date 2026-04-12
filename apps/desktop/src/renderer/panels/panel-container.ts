@@ -3,6 +3,7 @@ import { AiPanel } from '../internal-panels/ai-panel';
 import { AutomationsPanel } from '../internal-panels/automations-panel';
 import { McpPanel } from '../internal-panels/mcp-panel';
 import { WelcomeScreen } from '../welcome/welcome-screen.js';
+import { BrowserSidebar } from '../browser-sidebar/browser-sidebar.js';
 
 interface PanelEntry {
   id: string;
@@ -16,6 +17,9 @@ export class PanelContainer {
   private activePanelId: string | null = null;
   private resizeObserver: ResizeObserver;
   private placeholderEl: HTMLElement;
+  private browserSidebar: BrowserSidebar | null = null;
+  private browserSidebarEl: HTMLElement | null = null;
+  private browserSidebarVisible = false;
 
   constructor(el: HTMLElement) {
     this.el = el;
@@ -24,6 +28,19 @@ export class PanelContainer {
       this.syncActiveBounds();
     });
     this.resizeObserver.observe(this.el);
+
+    window.pmOs.wcv.onUrlChanged(({ id, url }: { id: string; url: string }) => {
+      if (id === 'browser' && this.browserSidebar) {
+        this.browserSidebar.setActiveUrl(url, '');
+      }
+    });
+
+    window.pmOs.wcv.onTitleChanged(({ id, title }: { id: string; title: string }) => {
+      if (id === 'browser' && this.browserSidebar) {
+        // Update title on the active tab
+        this.browserSidebar.updateActiveTab('', title);
+      }
+    });
   }
 
   render(): void {
@@ -82,6 +99,13 @@ export class PanelContainer {
     }
 
     this.activePanelId = id;
+
+    // Show/hide browser sidebar
+    if (id === 'browser') {
+      this.showBrowserSidebar();
+    } else {
+      this.hideBrowserSidebar();
+    }
   }
 
   async navigatePanel(id: string, url: string): Promise<void> {
@@ -128,12 +152,48 @@ export class PanelContainer {
     window.pmOs.wcv.setBounds(this.activePanelId, bounds);
   }
 
+  private showBrowserSidebar(): void {
+    if (!this.browserSidebarEl) {
+      this.browserSidebarEl = document.createElement('div');
+      this.browserSidebarEl.className = 'browser-sidebar';
+      this.el.appendChild(this.browserSidebarEl);
+
+      this.browserSidebar = new BrowserSidebar(this.browserSidebarEl, {
+        onNavigate: (url: string) => {
+          window.pmOs.wcv.navigate('browser', url);
+        },
+        onNewTab: () => {
+          window.pmOs.wcv.navigate('browser', 'https://www.google.com');
+        },
+      });
+
+      // Add initial tab
+      this.browserSidebar.addTab('https://www.google.com', 'Google');
+    }
+
+    this.browserSidebarEl.style.display = 'flex';
+    this.browserSidebarVisible = true;
+    this.browserSidebar!.show();
+
+    // Re-sync WCV bounds to account for sidebar width
+    this.syncActiveBounds();
+  }
+
+  private hideBrowserSidebar(): void {
+    if (this.browserSidebarEl) {
+      this.browserSidebarEl.style.display = 'none';
+    }
+    this.browserSidebarVisible = false;
+    this.syncActiveBounds();
+  }
+
   private getBounds(): { x: number; y: number; width: number; height: number } {
     const rect = this.el.getBoundingClientRect();
+    const sidebarOffset = this.browserSidebarVisible ? 220 : 0;
     return {
-      x: Math.round(rect.x),
+      x: Math.round(rect.x) + sidebarOffset,
       y: Math.round(rect.y),
-      width: Math.round(rect.width),
+      width: Math.round(rect.width) - sidebarOffset,
       height: Math.round(rect.height),
     };
   }
