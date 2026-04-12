@@ -1,4 +1,4 @@
-import type { TabBar } from '../panels/tab-bar';
+import type { PanelContainer } from '../panels/panel-container';
 import type { BottomPanel } from '../bottom-panel/bottom-panel';
 
 export interface Command {
@@ -10,7 +10,7 @@ export interface Command {
 
 export class CommandPalette {
   private el: HTMLElement;
-  private tabBar: TabBar;
+  private panelContainer: PanelContainer;
   private bottomPanel: BottomPanel;
   private commands: Command[] = [];
   private filteredCommands: Command[] = [];
@@ -18,9 +18,9 @@ export class CommandPalette {
   private inputEl!: HTMLInputElement;
   private resultsEl!: HTMLElement;
 
-  constructor(el: HTMLElement, tabBar: TabBar, bottomPanel: BottomPanel) {
+  constructor(el: HTMLElement, panelContainer: PanelContainer, bottomPanel: BottomPanel) {
     this.el = el;
-    this.tabBar = tabBar;
+    this.panelContainer = panelContainer;
     this.bottomPanel = bottomPanel;
     this.setupCommands();
     this.buildDom();
@@ -57,49 +57,49 @@ export class CommandPalette {
         id: 'open-slack',
         title: 'Open Slack',
         category: 'Workspace',
-        action: () => this.tabBar.openTab('slack', 'Slack', 'https://app.slack.com'),
+        action: () => this.panelContainer.showPanel('slack', 'https://app.slack.com'),
       },
       {
         id: 'open-notion',
         title: 'Open Notion',
         category: 'Workspace',
-        action: () => this.tabBar.openTab('notion', 'Notion', 'https://www.notion.so'),
+        action: () => this.panelContainer.showPanel('notion', 'https://www.notion.so'),
       },
       {
         id: 'open-browser',
         title: 'Open Browser',
         category: 'Workspace',
-        action: () => this.tabBar.openTab('browser', 'Browser', 'https://www.google.com'),
+        action: () => this.panelContainer.showPanel('browser', 'https://www.google.com'),
       },
       {
         id: 'open-figma',
         title: 'Open Figma',
         category: 'Workspace',
-        action: () => this.tabBar.openTab('figma', 'Figma', 'https://www.figma.com'),
+        action: () => this.panelContainer.showPanel('figma', 'https://www.figma.com'),
       },
       {
         id: 'open-gmail',
         title: 'Open Gmail',
         category: 'Workspace',
-        action: () => this.tabBar.openTab('gmail', 'Gmail', 'https://mail.google.com'),
+        action: () => this.panelContainer.showPanel('gmail', 'https://mail.google.com'),
       },
       {
         id: 'open-calendar',
         title: 'Open Calendar',
         category: 'Workspace',
-        action: () => this.tabBar.openTab('calendar', 'Calendar', 'https://calendar.google.com'),
+        action: () => this.panelContainer.showPanel('calendar', 'https://calendar.google.com'),
       },
       {
         id: 'open-jira',
         title: 'Open Jira',
         category: 'Workspace',
-        action: () => this.tabBar.openTab('jira', 'Jira', 'https://www.atlassian.com/software/jira'),
+        action: () => this.panelContainer.showPanel('jira', 'https://www.atlassian.com/software/jira'),
       },
       {
         id: 'open-confluence',
         title: 'Open Confluence',
         category: 'Workspace',
-        action: () => this.tabBar.openTab('confluence', 'Confluence', 'https://www.atlassian.com/software/confluence'),
+        action: () => this.panelContainer.showPanel('confluence', 'https://www.atlassian.com/software/confluence'),
       },
       {
         id: 'open-terminal',
@@ -111,13 +111,13 @@ export class CommandPalette {
         id: 'open-projects',
         title: 'Open Projects',
         category: 'Tools',
-        action: () => this.tabBar.openTab('projects', 'Projects'),
+        action: () => this.panelContainer.showPanel('projects'),
       },
       {
         id: 'open-mcp',
         title: 'Open MCP Center',
         category: 'Tools',
-        action: () => this.tabBar.openTab('mcp', 'MCP Center'),
+        action: () => this.panelContainer.showPanel('mcp'),
       },
     ];
     this.filteredCommands = [...this.commands];

@@ -1,4 +1,4 @@
-import type { TabBar } from '../panels/tab-bar';
+import type { PanelContainer } from '../panels/panel-container';
 import type { BottomPanel } from '../bottom-panel/bottom-panel';
 import type { NotificationCenter } from '../notification-center/notification-center';
 import type { SidebarPanel } from '../sidebar-panel/sidebar-panel';
@@ -35,16 +35,16 @@ const bottomItems: ActivityItem[] = [
 
 export class Sidebar {
   private activityBar: HTMLElement;
-  private tabBar: TabBar;
+  private panelContainer: PanelContainer;
   private bottomPanel: BottomPanel;
   private notificationCenter: NotificationCenter | null;
   private sidebarPanel: SidebarPanel | null;
   private tooltip: HTMLElement | null = null;
   private activeId: string | null = null;
 
-  constructor(activityBar: HTMLElement, tabBar: TabBar, bottomPanel: BottomPanel, notificationCenter?: NotificationCenter, sidebarPanel?: SidebarPanel) {
+  constructor(activityBar: HTMLElement, panelContainer: PanelContainer, bottomPanel: BottomPanel, notificationCenter?: NotificationCenter, sidebarPanel?: SidebarPanel) {
     this.activityBar = activityBar;
-    this.tabBar = tabBar;
+    this.panelContainer = panelContainer;
     this.bottomPanel = bottomPanel;
     this.notificationCenter = notificationCenter ?? null;
     this.sidebarPanel = sidebarPanel ?? null;
@@ -111,7 +111,7 @@ export class Sidebar {
         return;
       }
       this.setActive(item.id);
-      this.tabBar.openTab(item.id, item.title, item.url);
+      this.panelContainer.showPanel(item.id, item.url);
     });
 
     return btn;

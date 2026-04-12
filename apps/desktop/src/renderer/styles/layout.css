@@ -104,15 +104,7 @@
 }
 
 #tab-bar {
-  height: var(--tab-bar-height);
-  min-height: var(--tab-bar-height);
-  background: var(--bg-secondary);
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding: 0 4px;
+  display: none;
 }
 
 #panel-container {

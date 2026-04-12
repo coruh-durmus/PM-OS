@@ -1,5 +1,4 @@
 import { Sidebar } from './sidebar/sidebar';
-import { TabBar } from './panels/tab-bar';
 import { PanelContainer } from './panels/panel-container';
 import { CommandPalette } from './command-palette/command-palette';
 import { StatusBar } from './status-bar/status-bar';
@@ -15,7 +14,6 @@ import { MeetingMonitor } from './meeting-monitor/meeting-monitor.js';
 export class App {
   private sidebar!: Sidebar;
   private sidebarPanel!: SidebarPanel;
-  private tabBar!: TabBar;
   private panelContainer!: PanelContainer;
   private commandPalette!: CommandPalette;
   private statusBar!: StatusBar;
@@ -42,11 +40,6 @@ export class App {
       document.getElementById('panel-container')!,
     );
 
-    this.tabBar = new TabBar(
-      document.getElementById('tab-bar')!,
-      this.panelContainer,
-    );
-
     this.bottomPanel = new BottomPanel(
       document.getElementById('bottom-panel')!,
     );
@@ -59,7 +52,7 @@ export class App {
 
     this.sidebar = new Sidebar(
       document.getElementById('activity-bar')!,
-      this.tabBar,
+      this.panelContainer,
       this.bottomPanel,
       this.notificationCenter,
       this.sidebarPanel,
@@ -67,7 +60,7 @@ export class App {
 
     this.commandPalette = new CommandPalette(
       document.getElementById('command-palette')!,
-      this.tabBar,
+      this.panelContainer,
       this.bottomPanel,
     );
 
@@ -85,32 +78,26 @@ export class App {
       action: () => this.themePicker.toggle(),
     });
 
-    // Intercept links from embedded panels - open in Browser tab
+    // Intercept links from embedded panels — open in Browser panel
     window.pmOs.wcv.onOpenUrl(({ url }: { url: string }) => {
-      this.tabBar.openTab('browser', 'Browser', url);
+      this.panelContainer.showPanel('browser', url);
     });
 
     // Listen for workspace changes
     (window as any).pmOs.workspace.onChanged((data: any) => {
-      // Update title bar
       const titleEl = document.getElementById('titlebar-title');
       if (titleEl) {
         titleEl.textContent = data.isOpen ? data.name + ' \u2014 PMOS' : 'PMOS';
       }
-      // Update status bar
       this.statusBar.setProject(data.isOpen ? data.name : 'No workspace open');
     });
 
     this.bindKeyboard();
     this.sidebar.render();
-    this.tabBar.render();
     this.panelContainer.render();
     this.statusBar.render();
 
-    // Start meeting monitor
     const meetingMonitor = new MeetingMonitor();
-
-    // Check MCP health after 5 seconds
     const mcpChecker = new McpHealthChecker();
     setTimeout(() => mcpChecker.checkAndNotify(), 5000);
   }
@@ -133,26 +120,27 @@ export class App {
         e.preventDefault();
         (window as any).pmOs.workspace.openFolder();
       }
-      // Cmd+B toggles browser sidebar
       if ((e.metaKey || e.ctrlKey) && e.key === 'b') {
         e.preventDefault();
         this.panelContainer.toggleBrowserSidebar();
       }
 
-      // CMD+1-9 hotkeys for quick app switching
-      const appHotkeys = ['slack', 'notion', 'figma', 'gmail', 'calendar', 'jira', 'confluence', 'browser'];
-      const appNames = ['Slack', 'Notion', 'Figma', 'Gmail', 'Calendar', 'Jira', 'Confluence', 'Browser'];
-      const appUrls = [
-        'https://app.slack.com', 'https://www.notion.so', 'https://www.figma.com',
-        'https://mail.google.com', 'https://calendar.google.com', 'https://www.atlassian.com/software/jira',
-        'https://www.atlassian.com/software/confluence', 'https://www.google.com'
+      // CMD+1-8 hotkeys for quick app switching
+      const apps = [
+        { id: 'slack', url: 'https://app.slack.com' },
+        { id: 'notion', url: 'https://www.notion.so' },
+        { id: 'figma', url: 'https://www.figma.com' },
+        { id: 'gmail', url: 'https://mail.google.com' },
+        { id: 'calendar', url: 'https://calendar.google.com' },
+        { id: 'jira', url: 'https://www.atlassian.com/software/jira' },
+        { id: 'confluence', url: 'https://www.atlassian.com/software/confluence' },
+        { id: 'browser', url: 'https://www.google.com' },
       ];
 
-      for (let i = 0; i < appHotkeys.length; i++) {
-        // Check for Cmd+1 through Cmd+8
+      for (let i = 0; i < apps.length; i++) {
         if ((e.metaKey || e.ctrlKey) && e.key === String(i + 1)) {
           e.preventDefault();
-          this.tabBar.openTab(appHotkeys[i], appNames[i], appUrls[i]);
+          this.panelContainer.showPanel(apps[i].id, apps[i].url);
         }
       }
     });
