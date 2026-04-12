@@ -50,7 +50,7 @@ const api = {
   },
   project: {
     list: () => ipcRenderer.invoke('project:list'),
-    create: (name: string) => ipcRenderer.invoke('project:create', name),
+    create: (name: string, projectType?: string) => ipcRenderer.invoke('project:create', name, projectType),
     delete: (name: string) => ipcRenderer.invoke('project:delete', name),
     getConfig: (path: string) => ipcRenderer.invoke('project:get-config', path),
     getLinks: (path: string) => ipcRenderer.invoke('project:get-links', path),
@@ -110,6 +110,14 @@ const api = {
     addServer: (projectPath: string, name: string, config: any) => ipcRenderer.invoke('mcp:add-server', projectPath, name, config),
     removeServer: (projectPath: string, name: string) => ipcRenderer.invoke('mcp:remove-server', projectPath, name),
     listProjects: () => ipcRenderer.invoke('mcp:list-projects'),
+    checkInstalled: () => ipcRenderer.invoke('mcp:check-installed'),
+  },
+  system: {
+    checkClaudeCode: () => ipcRenderer.invoke('system:check-claude-code'),
+  },
+  settings: {
+    getEnabledApps: () => ipcRenderer.invoke('settings:get-enabled-apps'),
+    save: (settings: any) => ipcRenderer.invoke('settings:save', settings),
   },
   dialog: {
     openDirectory(): Promise<string | null> {

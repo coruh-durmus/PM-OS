@@ -84,10 +84,16 @@ export class CommandPalette {
         action: () => this.tabBar.openTab('gmail', 'Gmail', 'https://mail.google.com'),
       },
       {
-        id: 'open-ai-assistant',
-        title: 'Open AI Assistant',
-        category: 'Tools',
-        action: () => this.tabBar.openTab('ai-assistant', 'AI Assistant'),
+        id: 'open-jira',
+        title: 'Open Jira',
+        category: 'Workspace',
+        action: () => this.tabBar.openTab('jira', 'Jira', 'https://www.atlassian.com/software/jira'),
+      },
+      {
+        id: 'open-confluence',
+        title: 'Open Confluence',
+        category: 'Workspace',
+        action: () => this.tabBar.openTab('confluence', 'Confluence', 'https://www.atlassian.com/software/confluence'),
       },
       {
         id: 'open-terminal',

@@ -18,11 +18,12 @@ const topItems: ActivityItem[] = [
   { id: 'notion', title: 'Notion', icon: 'notion', url: 'https://www.notion.so' },
   { id: 'figma', title: 'Figma', icon: 'figma', url: 'https://www.figma.com' },
   { id: 'gmail', title: 'Gmail', icon: 'gmail', url: 'https://mail.google.com' },
+  { id: 'jira', title: 'Jira', icon: 'jira', url: 'https://www.atlassian.com/software/jira' },
+  { id: 'confluence', title: 'Confluence', icon: 'confluence', url: 'https://www.atlassian.com/software/confluence' },
   { id: 'browser', title: 'Browser', icon: 'browser', url: 'https://www.google.com' },
 ];
 
 const bottomItems: ActivityItem[] = [
-  { id: 'ai-assistant', title: 'AI Assistant', icon: 'ai-assistant' },
   { id: 'terminal', title: 'Terminal', icon: 'terminal', action: 'toggle-terminal' },
   { id: 'projects', title: 'Projects', icon: 'projects', action: 'toggle-sidebar', sidebarView: 'projects' },
   { id: 'automations', title: 'Automations', icon: 'automations' },

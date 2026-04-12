@@ -124,8 +124,40 @@ export function registerIpcHandlers(
     return getProjectStore()?.list() ?? [];
   });
 
-  ipcMain.handle('project:create', async (_e, name: string) => {
-    return getProjectStore()?.create(name);
+  ipcMain.handle('project:create', async (_e, name: string, projectType?: string) => {
+    const projectPath = await getProjectStore()?.create(name);
+    if (projectPath && projectType) {
+      const fs = require('fs');
+      const path = require('path');
+
+      const templates: Record<string, Record<string, string>> = {
+        'new-feature': {
+          'docs/PRD.md': `# ${name} — Product Requirements Document\n\n## Problem Statement\nWhat problem are we solving? Who is affected?\n\n## Goals & Success Metrics\n- Goal 1:\n- Success Metric:\n\n## User Stories\n- As a [user type], I want [action] so that [benefit]\n\n## Requirements\n### Must Have (P0)\n-\n\n### Should Have (P1)\n-\n\n### Nice to Have (P2)\n-\n\n## Design\nLink to Figma:\n\n## Technical Approach\nBrief technical direction:\n\n## Timeline\n| Phase | Scope | Target Date |\n|-------|-------|-------------|\n| Phase 1 | | |\n\n## Open Questions\n-\n\n## Decision Log\nSee .pm-os/decisions.log\n`,
+        },
+        'research': {
+          'docs/research-plan.md': `# ${name} — Research Plan\n\n## Objective\nWhat are we trying to learn?\n\n## Methodology\n- [ ] User interviews\n- [ ] Survey\n- [ ] Competitive analysis\n- [ ] Data analysis\n\n## Participants\nTarget: X participants\nCriteria:\n\n## Questions\n1.\n2.\n3.\n\n## Timeline\n| Week | Activity |\n|------|----------|\n| 1 | |\n`,
+          'docs/findings.md': `# ${name} — Research Findings\n\n## Summary\n\n## Key Insights\n1.\n2.\n3.\n\n## Recommendations\n-\n\n## Raw Data\nSee attached files.\n`,
+        },
+        'strategy': {
+          'docs/roadmap.md': `# ${name} — Roadmap\n\n## Vision\n\n## Now (This Quarter)\n-\n\n## Next (Next Quarter)\n-\n\n## Later\n-\n`,
+          'docs/okrs.md': `# ${name} — OKRs\n\n## Objective 1:\n- KR1:\n- KR2:\n- KR3:\n\n## Objective 2:\n- KR1:\n- KR2:\n`,
+        },
+        'documentation': {
+          'docs/spec.md': `# ${name}\n\n## Overview\n\n## Details\n\n## References\n`,
+        },
+      };
+
+      const files = templates[projectType];
+      if (files) {
+        for (const [filePath, content] of Object.entries(files)) {
+          const fullPath = path.join(projectPath, filePath);
+          const dir = path.dirname(fullPath);
+          if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+          fs.writeFileSync(fullPath, content, 'utf-8');
+        }
+      }
+    }
+    return projectPath;
   });
 
   ipcMain.handle('project:delete', (_e, name: string) => {
@@ -304,6 +336,35 @@ export function registerIpcHandlers(
     } catch { return []; }
   });
 
+  // System handlers
+  ipcMain.handle('system:check-claude-code', async () => {
+    const { execFileSync } = require('child_process');
+    try {
+      const version = execFileSync('claude', ['--version'], { encoding: 'utf-8', timeout: 5000 }).trim();
+      return { installed: true, version };
+    } catch {
+      return { installed: false, version: null };
+    }
+  });
+
+  // Settings handlers
+  ipcMain.handle('settings:get-enabled-apps', () => {
+    const fs = require('fs');
+    const settingsPath = path.join(os.homedir(), '.pm-os', 'settings.json');
+    try {
+      if (fs.existsSync(settingsPath)) return JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
+      return null;
+    } catch { return null; }
+  });
+
+  ipcMain.handle('settings:save', (_e: any, settings: any) => {
+    const fs = require('fs');
+    const dir = path.join(os.homedir(), '.pm-os');
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'settings.json'), JSON.stringify(settings, null, 2));
+    return true;
+  });
+
   // Git info handlers
   ipcMain.handle('git:get-info', async (_e, projectPath: string) => {
     const { execFileSync } = require('child_process');
@@ -393,6 +454,66 @@ export function registerIpcHandlers(
     } catch (err: any) {
       return { success: false, error: err.stderr?.toString() || err.message };
     }
+  });
+
+  // MCP health check — reads Claude Code's global .mcp.json
+  ipcMain.handle('mcp:check-installed', async () => {
+    const fs = require('fs');
+    const path = require('path');
+    const os = require('os');
+
+    // Check Claude Code's global MCP config
+    const globalMcpPaths = [
+      path.join(os.homedir(), '.claude', '.mcp.json'),
+      path.join(os.homedir(), '.claude.json'),
+    ];
+
+    let installedMcps: string[] = [];
+    for (const mcpPath of globalMcpPaths) {
+      try {
+        if (fs.existsSync(mcpPath)) {
+          const config = JSON.parse(fs.readFileSync(mcpPath, 'utf-8'));
+          const servers = config.mcpServers || config;
+          installedMcps = Object.keys(servers);
+          break;
+        }
+      } catch {}
+    }
+
+    // Also check project-level .mcp.json files
+    const wsPath = path.join(os.homedir(), 'pm-os-projects');
+    const projectMcps: Record<string, string[]> = {};
+    try {
+      if (fs.existsSync(wsPath)) {
+        const dirs = fs.readdirSync(wsPath, { withFileTypes: true });
+        for (const dir of dirs) {
+          if (!dir.isDirectory()) continue;
+          const projMcp = path.join(wsPath, dir.name, '.mcp.json');
+          try {
+            if (fs.existsSync(projMcp)) {
+              const config = JSON.parse(fs.readFileSync(projMcp, 'utf-8'));
+              projectMcps[dir.name] = Object.keys(config.mcpServers || config);
+            }
+          } catch {}
+        }
+      }
+    } catch {}
+
+    // Required MCPs based on PM-OS apps
+    const required = [
+      { id: 'slack', name: 'Slack MCP', npmPackage: '@anthropic/mcp-slack', forApp: 'Slack' },
+      { id: 'notion', name: 'Notion MCP', npmPackage: '@anthropic/mcp-notion', forApp: 'Notion' },
+      { id: 'atlassian', name: 'Atlassian MCP', npmPackage: '@anthropic/mcp-atlassian', forApp: 'Jira & Confluence' },
+      { id: 'gmail', name: 'Gmail MCP', npmPackage: '@anthropic/mcp-gmail', forApp: 'Gmail' },
+      { id: 'figma', name: 'Figma MCP', npmPackage: '@anthropic/mcp-figma', forApp: 'Figma' },
+    ];
+
+    const results = required.map(req => ({
+      ...req,
+      installed: installedMcps.some(m => m.toLowerCase().includes(req.id)),
+    }));
+
+    return { globalMcps: installedMcps, projectMcps, required: results };
   });
 
   // Workspace handlers
