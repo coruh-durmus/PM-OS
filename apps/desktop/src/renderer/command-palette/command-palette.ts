@@ -68,6 +68,12 @@ export class CommandPalette {
         action: () => this.tabBar.openTab('browser', 'Browser', 'https://www.google.com'),
       },
       {
+        id: 'open-figma',
+        title: 'Open Figma',
+        category: 'Workspace',
+        action: () => this.tabBar.openTab('figma', 'Figma', 'https://www.figma.com'),
+      },
+      {
         id: 'open-ai-assistant',
         title: 'Open AI Assistant',
         category: 'Tools',

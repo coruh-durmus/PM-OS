@@ -13,6 +13,7 @@ const workspaceItems: SidebarItem[] = [
   { id: 'slack', title: 'Slack', icon: '#', url: 'https://app.slack.com' },
   { id: 'notion', title: 'Notion', icon: 'N', url: 'https://www.notion.so' },
   { id: 'browser', title: 'Browser', icon: '\u{1F310}', url: 'https://www.google.com' },
+  { id: 'figma', title: 'Figma', icon: 'F', url: 'https://www.figma.com' },
 ];
 
 const toolItems: SidebarItem[] = [

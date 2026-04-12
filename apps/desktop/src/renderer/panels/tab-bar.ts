@@ -21,6 +21,9 @@ export class TabBar {
     const existing = this.tabs.find((t) => t.id === id);
     if (existing) {
       this.activateTab(id);
+      if (url) {
+        this.panelContainer.navigatePanel(id, url);
+      }
       return;
     }
 

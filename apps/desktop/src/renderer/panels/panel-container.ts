@@ -78,6 +78,13 @@ export class PanelContainer {
     this.activePanelId = id;
   }
 
+  async navigatePanel(id: string, url: string): Promise<void> {
+    const panel = this.panels.get(id);
+    if (panel && panel.isWcv) {
+      await window.pmOs.wcv.navigate(id, url);
+    }
+  }
+
   async destroyPanel(id: string): Promise<void> {
     const panel = this.panels.get(id);
     if (!panel) return;

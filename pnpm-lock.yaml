@@ -168,6 +168,25 @@ importers:
         specifier: ^3.1.0
         version: 3.2.4(@types/node@22.19.17)(tsx@4.21.0)(yaml@2.8.3)
 
+  extensions/figma-panel:
+    dependencies:
+      '@pm-os/event-bus':
+        specifier: workspace:*
+        version: link:../../packages/event-bus
+      '@pm-os/types':
+        specifier: workspace:*
+        version: link:../../packages/types
+    devDependencies:
+      esbuild:
+        specifier: ^0.25.0
+        version: 0.25.12
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.1.0
+        version: 3.2.4(@types/node@22.19.17)(tsx@4.21.0)(yaml@2.8.3)
+
   extensions/markdown-viewer:
     dependencies:
       '@pm-os/types':

@@ -80,6 +80,13 @@ export class WcvManager {
       this.sendToRenderer('wcv:loading', { id, loading: false });
     });
 
+    // Intercept new window requests (e.g., target="_blank" links)
+    // Open them in PM-OS browser tab instead of system browser
+    view.webContents.setWindowOpenHandler(({ url: openUrl }) => {
+      this.sendToRenderer('wcv:open-url', { url: openUrl });
+      return { action: 'deny' };
+    });
+
     // Load the URL
     view.webContents.loadURL(url).catch((err) => {
       console.error(`[WcvManager] Failed to load URL for ${id}:`, err);

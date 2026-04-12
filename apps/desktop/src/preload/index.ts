@@ -42,6 +42,11 @@ const api = {
       ipcRenderer.on('wcv:loading', handler);
       return () => ipcRenderer.removeListener('wcv:loading', handler);
     },
+    onOpenUrl(callback: (data: { url: string }) => void): () => void {
+      const listener = (_event: Electron.IpcRendererEvent, data: { url: string }) => callback(data);
+      ipcRenderer.on('wcv:open-url', listener);
+      return () => ipcRenderer.removeListener('wcv:open-url', listener);
+    },
   },
   dialog: {
     openDirectory(): Promise<string | null> {

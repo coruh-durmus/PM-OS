@@ -43,6 +43,11 @@ export class App {
       document.getElementById('status-bar')!,
     );
 
+    // Intercept links from embedded panels → open in Browser tab
+    window.pmOs.wcv.onOpenUrl(({ url }: { url: string }) => {
+      this.tabBar.openTab('browser', 'Browser', url);
+    });
+
     this.bindKeyboard();
     this.sidebar.render();
     this.tabBar.render();
