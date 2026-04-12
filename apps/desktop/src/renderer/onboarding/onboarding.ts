@@ -1,14 +1,13 @@
 /**
  * PM-OS First-Run Onboarding Wizard
- *
- * A multi-step overlay that guides new users through workspace setup,
- * app selection, Claude Code verification, and MCP connector configuration.
  */
+
+import { icons as sidebarIcons } from '../sidebar/icons.js';
 
 interface AppOption {
   id: string;
   name: string;
-  icon: string;
+  svg: string;
   color: string;
 }
 
@@ -20,13 +19,13 @@ interface McpConnector {
 }
 
 const APPS: AppOption[] = [
-  { id: 'slack', name: 'Slack', icon: '#', color: '#e01e5a' },
-  { id: 'notion', name: 'Notion', icon: 'N', color: '#ffffff' },
-  { id: 'figma', name: 'Figma', icon: 'F', color: '#a259ff' },
-  { id: 'gmail', name: 'Gmail', icon: 'M', color: '#ea4335' },
-  { id: 'jira', name: 'Jira', icon: 'J', color: '#0052cc' },
-  { id: 'confluence', name: 'Confluence', icon: 'C', color: '#1868db' },
-  { id: 'browser', name: 'Browser', icon: 'B', color: '#89b4fa' },
+  { id: 'slack', name: 'Slack', svg: sidebarIcons.slack, color: '#e01e5a' },
+  { id: 'notion', name: 'Notion', svg: sidebarIcons.notion, color: '#ffffff' },
+  { id: 'figma', name: 'Figma', svg: sidebarIcons.figma, color: '#a259ff' },
+  { id: 'gmail', name: 'Gmail', svg: sidebarIcons.gmail, color: '#ea4335' },
+  { id: 'jira', name: 'Jira', svg: sidebarIcons.jira, color: '#0052cc' },
+  { id: 'confluence', name: 'Confluence', svg: sidebarIcons.confluence, color: '#1868db' },
+  { id: 'browser', name: 'Browser', svg: sidebarIcons.browser, color: '#89b4fa' },
 ];
 
 const MCP_CONNECTORS: McpConnector[] = [
@@ -329,7 +328,7 @@ export class Onboarding {
 
       const icon = document.createElement('div');
       icon.className = 'onboarding-app-icon';
-      icon.textContent = app.icon;
+      icon.innerHTML = app.svg;
       icon.style.background = app.color + '22';
       icon.style.color = app.color;
       item.appendChild(icon);
