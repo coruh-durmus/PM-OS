@@ -1,5 +1,7 @@
+import path from 'path';
 import { BrowserWindow, WebContentsView } from 'electron';
 import type { PanelBounds, WebContentsViewOptions, WebContentsViewState } from '@pm-os/types';
+import type { NotificationManager } from './notification-manager.js';
 
 interface ManagedView {
   view: WebContentsView;
@@ -12,9 +14,11 @@ interface ManagedView {
 export class WcvManager {
   private views = new Map<string, ManagedView>();
   private window: BrowserWindow;
+  private notificationManager: NotificationManager | null;
 
-  constructor(window: BrowserWindow) {
+  constructor(window: BrowserWindow, notificationManager?: NotificationManager) {
     this.window = window;
+    this.notificationManager = notificationManager ?? null;
   }
 
   create(options: WebContentsViewOptions): string {
@@ -29,9 +33,10 @@ export class WcvManager {
     const view = new WebContentsView({
       webPreferences: {
         partition: partition ?? `persist:${id}`,
+        preload: path.join(__dirname, 'wcv-preload.js'),
         contextIsolation: true,
         nodeIntegration: false,
-        sandbox: true,
+        sandbox: false,
       },
     });
 
@@ -85,6 +90,20 @@ export class WcvManager {
     view.webContents.setWindowOpenHandler(({ url: openUrl }) => {
       this.sendToRenderer('wcv:open-url', { url: openUrl });
       return { action: 'deny' };
+    });
+
+    // Grant notification permission automatically
+    view.webContents.session.setPermissionRequestHandler((_webContents, permission, callback) => {
+      // Allow all permissions for embedded apps (notifications, media, etc.)
+      callback(true);
+    });
+
+    // Listen for notification events sent from wcv-preload
+    view.webContents.ipc.on('wcv:notification', (_event, data: { title: string; body: string }) => {
+      if (this.notificationManager) {
+        const appName = this.getAppName(id);
+        this.notificationManager.addNotification(id, appName, data.title, data.body);
+      }
     });
 
     // Load the URL
@@ -157,6 +176,14 @@ export class WcvManager {
     for (const id of this.views.keys()) {
       this.destroy(id);
     }
+  }
+
+  private getAppName(id: string): string {
+    const names: Record<string, string> = {
+      slack: 'Slack', notion: 'Notion', figma: 'Figma',
+      gmail: 'Gmail', browser: 'Browser',
+    };
+    return names[id] || id;
   }
 
   private sendToRenderer(channel: string, data: Record<string, unknown>): void {

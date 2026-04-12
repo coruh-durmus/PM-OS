@@ -68,6 +68,27 @@ const api = {
   workspace: {
     ensureClaudeMd: () => ipcRenderer.invoke('workspace:ensure-claude-md'),
   },
+  notifications: {
+    getAll: () => ipcRenderer.invoke('notifications:get-all'),
+    getUnreadCount: () => ipcRenderer.invoke('notifications:get-unread-count'),
+    markRead: (id: string) => ipcRenderer.invoke('notifications:mark-read', id),
+    markAllRead: () => ipcRenderer.invoke('notifications:mark-all-read'),
+    clearAll: () => ipcRenderer.invoke('notifications:clear-all'),
+    getSettings: () => ipcRenderer.invoke('notifications:get-settings'),
+    setAppEnabled: (appId: string, enabled: boolean) => ipcRenderer.invoke('notifications:set-app-enabled', appId, enabled),
+    onNew: (callback: (notif: any) => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, notif: any) => callback(notif);
+      ipcRenderer.on('notification:new', listener);
+      return () => ipcRenderer.removeListener('notification:new', listener);
+    },
+  },
+  mcp: {
+    getConfig: (projectPath: string) => ipcRenderer.invoke('mcp:get-config', projectPath),
+    saveConfig: (projectPath: string, config: any) => ipcRenderer.invoke('mcp:save-config', projectPath, config),
+    addServer: (projectPath: string, name: string, config: any) => ipcRenderer.invoke('mcp:add-server', projectPath, name, config),
+    removeServer: (projectPath: string, name: string) => ipcRenderer.invoke('mcp:remove-server', projectPath, name),
+    listProjects: () => ipcRenderer.invoke('mcp:list-projects'),
+  },
   dialog: {
     openDirectory(): Promise<string | null> {
       return ipcRenderer.invoke('dialog:open-directory');

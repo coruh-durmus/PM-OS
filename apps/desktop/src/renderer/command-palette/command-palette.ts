@@ -101,6 +101,12 @@ export class CommandPalette {
         category: 'Tools',
         action: () => this.tabBar.openTab('projects', 'Projects'),
       },
+      {
+        id: 'open-mcp',
+        title: 'Open MCP Center',
+        category: 'Tools',
+        action: () => this.tabBar.openTab('mcp', 'MCP Center'),
+      },
     ];
     this.filteredCommands = [...this.commands];
   }

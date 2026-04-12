@@ -6,6 +6,7 @@ import { StatusBar } from './status-bar/status-bar';
 import { BottomPanel } from './bottom-panel/bottom-panel';
 import { ThemeManager } from './themes/theme-manager';
 import { ThemePicker } from './themes/theme-picker';
+import { NotificationCenter } from './notification-center/notification-center';
 
 export class App {
   private sidebar!: Sidebar;
@@ -16,6 +17,7 @@ export class App {
   private bottomPanel!: BottomPanel;
   private themeManager!: ThemeManager;
   private themePicker!: ThemePicker;
+  private notificationCenter!: NotificationCenter;
 
   init(): void {
     this.panelContainer = new PanelContainer(
@@ -31,10 +33,13 @@ export class App {
       document.getElementById('bottom-panel')!,
     );
 
+    this.notificationCenter = new NotificationCenter();
+
     this.sidebar = new Sidebar(
       document.getElementById('activity-bar')!,
       this.tabBar,
       this.bottomPanel,
+      this.notificationCenter,
     );
 
     this.commandPalette = new CommandPalette(

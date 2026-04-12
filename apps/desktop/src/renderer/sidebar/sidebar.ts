@@ -1,5 +1,6 @@
 import type { TabBar } from '../panels/tab-bar';
 import type { BottomPanel } from '../bottom-panel/bottom-panel';
+import type { NotificationCenter } from '../notification-center/notification-center';
 import { icons } from './icons';
 
 interface ActivityItem {
@@ -7,7 +8,7 @@ interface ActivityItem {
   title: string;
   icon: string;          // key into the icons map
   url?: string;          // opens as webview tab
-  action?: 'toggle-terminal';
+  action?: 'toggle-terminal' | 'toggle-notifications';
 }
 
 const topItems: ActivityItem[] = [
@@ -23,6 +24,8 @@ const bottomItems: ActivityItem[] = [
   { id: 'terminal', title: 'Terminal', icon: 'terminal', action: 'toggle-terminal' },
   { id: 'projects', title: 'Projects', icon: 'projects' },
   { id: 'automations', title: 'Automations', icon: 'automations' },
+  { id: 'mcp', title: 'MCP Center', icon: 'mcp' },
+  { id: 'notifications', title: 'Notifications', icon: 'notifications', action: 'toggle-notifications' },
   { id: 'settings', title: 'Settings', icon: 'settings' },
 ];
 
@@ -30,13 +33,15 @@ export class Sidebar {
   private activityBar: HTMLElement;
   private tabBar: TabBar;
   private bottomPanel: BottomPanel;
+  private notificationCenter: NotificationCenter | null;
   private tooltip: HTMLElement | null = null;
   private activeId: string | null = null;
 
-  constructor(activityBar: HTMLElement, tabBar: TabBar, bottomPanel: BottomPanel) {
+  constructor(activityBar: HTMLElement, tabBar: TabBar, bottomPanel: BottomPanel, notificationCenter?: NotificationCenter) {
     this.activityBar = activityBar;
     this.tabBar = tabBar;
     this.bottomPanel = bottomPanel;
+    this.notificationCenter = notificationCenter ?? null;
   }
 
   render(): void {
@@ -63,7 +68,17 @@ export class Sidebar {
     const btn = document.createElement('button');
     btn.className = 'activity-bar-item';
     btn.dataset.id = item.id;
+    btn.style.position = 'relative';
     btn.innerHTML = icons[item.icon] ?? '';
+
+    // Notification badge
+    if (item.id === 'notifications') {
+      const badge = document.createElement('span');
+      badge.className = 'notification-badge';
+      badge.style.display = 'none';
+      btn.appendChild(badge);
+      this.notificationCenter?.setBadgeElement(badge);
+    }
 
     // Tooltip on hover
     btn.addEventListener('mouseenter', (e) => {
@@ -74,9 +89,14 @@ export class Sidebar {
     });
 
     // Click action
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', (e) => {
       if (item.action === 'toggle-terminal') {
         this.bottomPanel.toggle();
+        return;
+      }
+      if (item.action === 'toggle-notifications') {
+        e.stopPropagation();
+        this.notificationCenter?.toggle();
         return;
       }
       this.setActive(item.id);

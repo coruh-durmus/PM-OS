@@ -1,6 +1,7 @@
 import { ProjectsPanel } from '../internal-panels/projects-panel';
 import { AiPanel } from '../internal-panels/ai-panel';
 import { AutomationsPanel } from '../internal-panels/automations-panel';
+import { McpPanel } from '../internal-panels/mcp-panel';
 
 interface PanelEntry {
   id: string;
@@ -185,6 +186,11 @@ export class PanelContainer {
       }
       case 'automations': {
         const panel = new AutomationsPanel(wrapper);
+        panel.render();
+        break;
+      }
+      case 'mcp': {
+        const panel = new McpPanel(wrapper);
         panel.render();
         break;
       }

@@ -2,6 +2,7 @@ import { BrowserWindow, ipcMain, dialog } from 'electron';
 import type { WcvManager } from './wcv-manager.js';
 import type { ExtensionHost } from './extension-host.js';
 import type { PtyManager } from './pty-manager.js';
+import type { NotificationManager } from './notification-manager.js';
 import type { PanelBounds, WebContentsViewOptions } from '@pm-os/types';
 
 export function registerIpcHandlers(
@@ -9,6 +10,7 @@ export function registerIpcHandlers(
   wcv: WcvManager,
   extensionHost?: ExtensionHost,
   ptyManager?: PtyManager,
+  notificationManager?: NotificationManager,
 ): void {
   ipcMain.handle('wcv:create', (_event, options: WebContentsViewOptions) => {
     return wcv.create(options);
@@ -202,5 +204,97 @@ export function registerIpcHandlers(
       fs.writeFileSync(claudePath, `# PM-OS Workspace\n\nShared AI instructions for all projects in this workspace.\n`);
     }
     return claudePath;
+  });
+
+  // Notification center handlers
+  ipcMain.handle('notifications:get-all', () => {
+    return notificationManager?.getAll() ?? [];
+  });
+
+  ipcMain.handle('notifications:get-unread-count', () => {
+    return notificationManager?.getUnreadCount() ?? 0;
+  });
+
+  ipcMain.handle('notifications:mark-read', (_e, id: string) => {
+    notificationManager?.markRead(id);
+  });
+
+  ipcMain.handle('notifications:mark-all-read', () => {
+    notificationManager?.markAllRead();
+  });
+
+  ipcMain.handle('notifications:clear-all', () => {
+    notificationManager?.clearAll();
+  });
+
+  ipcMain.handle('notifications:get-settings', () => {
+    return notificationManager?.getSettings() ?? {};
+  });
+
+  ipcMain.handle('notifications:set-app-enabled', (_e, appId: string, enabled: boolean) => {
+    notificationManager?.setAppEnabled(appId, enabled);
+  });
+
+  // MCP Center handlers
+  ipcMain.handle('mcp:get-config', (_e, projectPath: string) => {
+    const fs = require('fs');
+    const p = require('path');
+    const mcpPath = p.join(projectPath, '.mcp.json');
+    try {
+      if (!fs.existsSync(mcpPath)) return { mcpServers: {} };
+      return JSON.parse(fs.readFileSync(mcpPath, 'utf-8'));
+    } catch { return { mcpServers: {} }; }
+  });
+
+  ipcMain.handle('mcp:save-config', (_e, projectPath: string, config: any) => {
+    const fs = require('fs');
+    const p = require('path');
+    const mcpPath = p.join(projectPath, '.mcp.json');
+    try {
+      fs.writeFileSync(mcpPath, JSON.stringify(config, null, 2), 'utf-8');
+      return true;
+    } catch { return false; }
+  });
+
+  ipcMain.handle('mcp:add-server', (_e, projectPath: string, name: string, serverConfig: any) => {
+    const fs = require('fs');
+    const p = require('path');
+    const mcpPath = p.join(projectPath, '.mcp.json');
+    try {
+      let config = { mcpServers: {} } as any;
+      if (fs.existsSync(mcpPath)) {
+        config = JSON.parse(fs.readFileSync(mcpPath, 'utf-8'));
+        if (!config.mcpServers) config.mcpServers = {};
+      }
+      config.mcpServers[name] = serverConfig;
+      fs.writeFileSync(mcpPath, JSON.stringify(config, null, 2), 'utf-8');
+      return true;
+    } catch { return false; }
+  });
+
+  ipcMain.handle('mcp:remove-server', (_e, projectPath: string, name: string) => {
+    const fs = require('fs');
+    const p = require('path');
+    const mcpPath = p.join(projectPath, '.mcp.json');
+    try {
+      if (!fs.existsSync(mcpPath)) return false;
+      const config = JSON.parse(fs.readFileSync(mcpPath, 'utf-8'));
+      if (config.mcpServers) delete config.mcpServers[name];
+      fs.writeFileSync(mcpPath, JSON.stringify(config, null, 2), 'utf-8');
+      return true;
+    } catch { return false; }
+  });
+
+  ipcMain.handle('mcp:list-projects', () => {
+    const fs = require('fs');
+    const p = require('path');
+    const os = require('os');
+    const wsPath = p.join(os.homedir(), 'pm-os-projects');
+    try {
+      if (!fs.existsSync(wsPath)) return [];
+      return fs.readdirSync(wsPath, { withFileTypes: true })
+        .filter((d: any) => d.isDirectory() && fs.existsSync(p.join(wsPath, d.name, '.pm-os', 'config.json')))
+        .map((d: any) => ({ name: d.name, path: p.join(wsPath, d.name) }));
+    } catch { return []; }
   });
 }
