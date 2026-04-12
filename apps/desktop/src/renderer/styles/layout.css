@@ -1,12 +1,41 @@
 #app {
   display: grid;
   grid-template-columns: 48px 1fr;
-  grid-template-rows: 1fr var(--status-bar-height);
+  grid-template-rows: var(--titlebar-height) 1fr var(--status-bar-height);
   grid-template-areas:
-    "actbar main"
-    "status status";
+    "titlebar titlebar"
+    "actbar   main"
+    "status   status";
   height: 100vh;
   width: 100vw;
+}
+
+/* Title bar — spans full width, centered app name */
+#titlebar {
+  grid-area: titlebar;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  -webkit-app-region: drag;
+  user-select: none;
+}
+
+#titlebar-drag {
+  position: absolute;
+  inset: 0;
+  -webkit-app-region: drag;
+}
+
+#titlebar-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 1.5px;
+  z-index: 1;
+  pointer-events: none;
 }
 
 #sidebar {
@@ -20,7 +49,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding-top: 42px; /* clear macOS traffic lights */
+  padding-top: 6px;
   overflow: hidden;
 }
 
