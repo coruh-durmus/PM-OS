@@ -33,10 +33,9 @@ export class WcvManager {
     const view = new WebContentsView({
       webPreferences: {
         partition: partition ?? `persist:${id}`,
-        preload: path.join(__dirname, 'wcv-preload.js'),
         contextIsolation: true,
         nodeIntegration: false,
-        sandbox: false,
+        sandbox: true,
       },
     });
 
@@ -102,12 +101,17 @@ export class WcvManager {
       return true;
     });
 
-    // Listen for notification events sent from wcv-preload
-    view.webContents.ipc.on('wcv:notification', (_event, data: { title: string; body: string }) => {
-      if (this.notificationManager) {
+    // Capture page title changes as a proxy for notifications
+    // (non-invasive: no preload injection that could break sites like Figma)
+    let lastTitle = '';
+    view.webContents.on('page-title-updated', (_event, title) => {
+      // Many apps update the title with notification counts, e.g., "(3) Slack"
+      const countMatch = title.match(/^\((\d+)\)/);
+      if (countMatch && this.notificationManager && title !== lastTitle) {
         const appName = this.getAppName(id);
-        this.notificationManager.addNotification(id, appName, data.title, data.body);
+        this.notificationManager.addNotification(id, appName, `New activity in ${appName}`, title);
       }
+      lastTitle = title;
     });
 
     // Load the URL
