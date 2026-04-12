@@ -7,9 +7,11 @@ import { BottomPanel } from './bottom-panel/bottom-panel';
 import { ThemeManager } from './themes/theme-manager';
 import { ThemePicker } from './themes/theme-picker';
 import { NotificationCenter } from './notification-center/notification-center';
+import { SidebarPanel } from './sidebar-panel/sidebar-panel';
 
 export class App {
   private sidebar!: Sidebar;
+  private sidebarPanel!: SidebarPanel;
   private tabBar!: TabBar;
   private panelContainer!: PanelContainer;
   private commandPalette!: CommandPalette;
@@ -35,11 +37,16 @@ export class App {
 
     this.notificationCenter = new NotificationCenter();
 
+    this.sidebarPanel = new SidebarPanel(
+      document.getElementById('sidebar')!,
+    );
+
     this.sidebar = new Sidebar(
       document.getElementById('activity-bar')!,
       this.tabBar,
       this.bottomPanel,
       this.notificationCenter,
+      this.sidebarPanel,
     );
 
     this.commandPalette = new CommandPalette(

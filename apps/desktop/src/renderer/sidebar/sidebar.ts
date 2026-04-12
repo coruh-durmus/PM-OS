@@ -1,6 +1,7 @@
 import type { TabBar } from '../panels/tab-bar';
 import type { BottomPanel } from '../bottom-panel/bottom-panel';
 import type { NotificationCenter } from '../notification-center/notification-center';
+import type { SidebarPanel } from '../sidebar-panel/sidebar-panel';
 import { icons } from './icons';
 
 interface ActivityItem {
@@ -8,7 +9,8 @@ interface ActivityItem {
   title: string;
   icon: string;          // key into the icons map
   url?: string;          // opens as webview tab
-  action?: 'toggle-terminal' | 'toggle-notifications';
+  action?: 'toggle-terminal' | 'toggle-notifications' | 'toggle-sidebar';
+  sidebarView?: string;  // which sidebar view to show
 }
 
 const topItems: ActivityItem[] = [
@@ -22,7 +24,7 @@ const topItems: ActivityItem[] = [
 const bottomItems: ActivityItem[] = [
   { id: 'ai-assistant', title: 'AI Assistant', icon: 'ai-assistant' },
   { id: 'terminal', title: 'Terminal', icon: 'terminal', action: 'toggle-terminal' },
-  { id: 'projects', title: 'Projects', icon: 'projects' },
+  { id: 'projects', title: 'Projects', icon: 'projects', action: 'toggle-sidebar', sidebarView: 'projects' },
   { id: 'automations', title: 'Automations', icon: 'automations' },
   { id: 'mcp', title: 'MCP Center', icon: 'mcp' },
   { id: 'notifications', title: 'Notifications', icon: 'notifications', action: 'toggle-notifications' },
@@ -34,14 +36,16 @@ export class Sidebar {
   private tabBar: TabBar;
   private bottomPanel: BottomPanel;
   private notificationCenter: NotificationCenter | null;
+  private sidebarPanel: SidebarPanel | null;
   private tooltip: HTMLElement | null = null;
   private activeId: string | null = null;
 
-  constructor(activityBar: HTMLElement, tabBar: TabBar, bottomPanel: BottomPanel, notificationCenter?: NotificationCenter) {
+  constructor(activityBar: HTMLElement, tabBar: TabBar, bottomPanel: BottomPanel, notificationCenter?: NotificationCenter, sidebarPanel?: SidebarPanel) {
     this.activityBar = activityBar;
     this.tabBar = tabBar;
     this.bottomPanel = bottomPanel;
     this.notificationCenter = notificationCenter ?? null;
+    this.sidebarPanel = sidebarPanel ?? null;
   }
 
   render(): void {
@@ -97,6 +101,11 @@ export class Sidebar {
       if (item.action === 'toggle-notifications') {
         e.stopPropagation();
         this.notificationCenter?.toggle();
+        return;
+      }
+      if (item.action === 'toggle-sidebar' && item.sidebarView) {
+        this.sidebarPanel?.toggle(item.sidebarView);
+        this.setActive(item.id);
         return;
       }
       this.setActive(item.id);

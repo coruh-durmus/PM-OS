@@ -1,11 +1,11 @@
 #app {
   display: grid;
-  grid-template-columns: 48px 1fr;
+  grid-template-columns: 48px auto 1fr;
   grid-template-rows: var(--titlebar-height) 1fr var(--status-bar-height);
   grid-template-areas:
-    "titlebar titlebar"
-    "actbar   main"
-    "status   status";
+    "titlebar titlebar titlebar"
+    "actbar   sidebar  main"
+    "status   status   status";
   height: 100vh;
   width: 100vw;
 }
@@ -38,8 +38,43 @@
   pointer-events: none;
 }
 
+/* Sidebar — collapsible side panel for explorer/projects */
 #sidebar {
+  grid-area: sidebar;
+  width: var(--sidebar-width);
+  min-width: 150px;
+  max-width: 500px;
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border);
+  display: flex;
+  overflow: hidden;
+  position: relative;
+}
+
+#sidebar.hidden {
   display: none;
+}
+
+#sidebar-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+#sidebar-resize-handle {
+  width: 4px;
+  cursor: ew-resize;
+  background: transparent;
+  flex-shrink: 0;
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 10;
+}
+
+#sidebar-resize-handle:hover {
+  background: var(--accent);
 }
 
 #activity-bar {
