@@ -14,17 +14,22 @@ PM-OS is an open-source desktop application that serves as a unified operating s
 
 **Approach: Extension-Based Shell**
 
-A minimal VS Code fork with all PM functionality delivered as 9 core extensions. The fork itself handles branding, theme, welcome screen, layout presets, and — critically — **Electron BrowserView integration** for embedding third-party web apps.
+A minimal VS Code fork with all PM functionality delivered as 9 core extensions + 3 shared packages. The fork itself handles branding, theme, welcome screen, layout presets, and — critically — **Electron WebContentsView integration** for embedding third-party web apps.
 
-**Why the fork needs BrowserView support:** VS Code's standard webview API uses sandboxed iframes. Slack, Notion, and most web apps set `X-Frame-Options: DENY` headers that block iframe embedding. The fork must expose Electron's `BrowserView` (or `<webview>` tag) as a new panel type that extensions can use to embed external sites with full functionality (login, cookies, navigation).
+**Why WebContentsView (not BrowserView):** VS Code's standard webview API uses sandboxed iframes. Slack, Notion, and most web apps set `X-Frame-Options: DENY` headers that block iframe embedding. The fork must expose Electron's `WebContentsView` (the modern replacement for the deprecated `BrowserView`, available since Electron 30) as a new panel type. Extensions use it to embed external sites with full functionality (login, cookies, navigation). Session persistence uses `persist:` partitions.
 
 ```
 PM-OS Shell (VS Code fork)
-├── BrowserView Panel API (fork-level, enables embedding external sites)
-├── Slack Panel Extension (BrowserView + AI context bar)
-├── Notion Panel Extension (BrowserView + AI context bar)
-├── Browser Panel Extension (BrowserView + AI context bar)
-├── AI Assistant Extension (sidebar chat + terminal)
+├── WebContentsView Panel API (fork-level, enables embedding external sites)
+├── Shared Packages:
+│   ├── pm-os-types (shared TypeScript interfaces)
+│   ├── pm-os-event-bus (cross-extension event bus)
+│   └── pm-os-claude (shared Claude API client, caching, cost tracking)
+├── Slack Panel Extension (WebContentsView + AI context bar)
+├── Notion Panel Extension (WebContentsView + AI context bar)
+├── Browser Panel Extension (WebContentsView + AI context bar)
+├── AI Assistant Extension (sidebar chat + terminal + cross-tool actions)
+├── AI Context Bar Extension (shared component for panel overlays)
 ├── Project Manager Extension (per-project config/memory)
 ├── Automation Engine Extension (cron + event triggers)
 ├── MCP/Plugin Manager Extension (extensibility)
@@ -34,7 +39,8 @@ PM-OS Shell (VS Code fork)
 
 **Cross-Extension Communication:** Extensions share state and events via:
 - VS Code commands as inter-extension RPC (e.g., `pm-os.slack.getActiveChannel`)
-- A shared `pm-os.context` event bus (implemented as a VS Code EventEmitter in a shared extension API)
+- The `pm-os-event-bus` shared package: exports an EventEmitter via `activate()`, events include `onPanelContextChanged`, `onProjectChanged`, `onAuthChanged`. Activates first via `activationEvents: ["*"]`.
+- Shared types from `pm-os-types` package ensure type safety across extension boundaries
 - Project state read from disk (config.json, links.json) via the Project Manager extension
 
 **Auth Backend**: A lightweight Node.js service that handles OAuth2 flows for Slack, Notion, and other services. Stores tokens server-side, provides session-based access to the desktop app. Self-hosters can run it locally or use BYOK (works for Notion integration tokens and Claude API keys; Slack requires the hosted OAuth flow via a registered PM-OS Slack app).
