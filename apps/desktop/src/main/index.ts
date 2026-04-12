@@ -1,5 +1,8 @@
-import { app } from 'electron';
+import { app, session } from 'electron';
 import { createMainWindow } from './window.js';
+
+// Enable WebAuthn/passkey support
+app.commandLine.appendSwitch('enable-features', 'WebAuthenticationMacOS');
 import { WcvManager } from './wcv-manager.js';
 import { registerIpcHandlers } from './ipc.js';
 import { ExtensionHost } from './extension-host.js';
@@ -22,6 +25,10 @@ app.whenReady().then(async () => {
   workspaceManager.setWindow(mainWindow);
   createAppMenu(workspaceManager);
   registerIpcHandlers(mainWindow, wcvManager, extensionHost, ptyManager, notificationManager, workspaceManager);
+
+  // Enable WebAuthn for all sessions (passkey support)
+  session.defaultSession.setPermissionCheckHandler(() => true);
+  session.defaultSession.setPermissionRequestHandler((_wc, _perm, cb) => cb(true));
 
   await extensionHost.loadAll();
 

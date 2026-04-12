@@ -92,10 +92,14 @@ export class WcvManager {
       return { action: 'deny' };
     });
 
-    // Grant notification permission automatically
+    // Grant all permissions for embedded apps (notifications, media, WebAuthn/passkeys, etc.)
     view.webContents.session.setPermissionRequestHandler((_webContents, permission, callback) => {
-      // Allow all permissions for embedded apps (notifications, media, etc.)
       callback(true);
+    });
+
+    // Also allow permission checks (needed for WebAuthn/passkeys)
+    view.webContents.session.setPermissionCheckHandler(() => {
+      return true;
     });
 
     // Listen for notification events sent from wcv-preload
