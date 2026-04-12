@@ -4,7 +4,6 @@
   "private": true,
   "displayName": "PM-OS Automation Engine",
   "description": "Cron-based automation engine for PM-OS workflows",
-  "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {

@@ -4,7 +4,6 @@
   "private": true,
   "displayName": "PM-OS Project Manager",
   "description": "Create, manage, and switch between PM-OS projects",
-  "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {

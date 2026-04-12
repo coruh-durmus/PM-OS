@@ -4,7 +4,6 @@
   "private": true,
   "displayName": "PM-OS Auth",
   "description": "Authentication and credential management for PM-OS",
-  "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {

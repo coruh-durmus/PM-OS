@@ -4,7 +4,6 @@
   "private": true,
   "displayName": "PM-OS Slack Panel",
   "description": "Embedded Slack panel for PM-OS",
-  "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {

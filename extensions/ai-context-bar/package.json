@@ -4,7 +4,6 @@
   "private": true,
   "displayName": "PM-OS AI Context Bar",
   "description": "AI-powered context sidebar that summarizes panels and suggests actions",
-  "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {

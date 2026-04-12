@@ -4,7 +4,6 @@
   "private": true,
   "displayName": "PM-OS Browser Panel",
   "description": "Embedded browser panel with tab management for PM-OS",
-  "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
