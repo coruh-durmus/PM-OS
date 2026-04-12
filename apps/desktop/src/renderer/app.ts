@@ -74,6 +74,17 @@ export class App {
       this.tabBar.openTab('browser', 'Browser', url);
     });
 
+    // Listen for workspace changes
+    (window as any).pmOs.workspace.onChanged((data: any) => {
+      // Update title bar
+      const titleEl = document.getElementById('titlebar-title');
+      if (titleEl) {
+        titleEl.textContent = data.isOpen ? data.name + ' \u2014 PMOS' : 'PMOS';
+      }
+      // Update status bar
+      this.statusBar.setProject(data.isOpen ? data.name : 'No workspace open');
+    });
+
     this.bindKeyboard();
     this.sidebar.render();
     this.tabBar.render();
@@ -94,6 +105,10 @@ export class App {
       if (e.ctrlKey && e.shiftKey && e.key === 'T') {
         e.preventDefault();
         this.themePicker.toggle();
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === 'o') {
+        e.preventDefault();
+        (window as any).pmOs.workspace.openFolder();
       }
     });
   }

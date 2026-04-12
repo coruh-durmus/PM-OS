@@ -3,6 +3,7 @@ import type { WcvManager } from './wcv-manager.js';
 import type { ExtensionHost } from './extension-host.js';
 import type { PtyManager } from './pty-manager.js';
 import type { NotificationManager } from './notification-manager.js';
+import type { WorkspaceManager } from './workspace-manager.js';
 import type { PanelBounds, WebContentsViewOptions } from '@pm-os/types';
 
 export function registerIpcHandlers(
@@ -11,6 +12,7 @@ export function registerIpcHandlers(
   extensionHost?: ExtensionHost,
   ptyManager?: PtyManager,
   notificationManager?: NotificationManager,
+  workspaceManager?: WorkspaceManager,
 ): void {
   ipcMain.handle('wcv:create', (_event, options: WebContentsViewOptions) => {
     return wcv.create(options);
@@ -388,4 +390,16 @@ export function registerIpcHandlers(
       return { success: false, error: err.stderr?.toString() || err.message };
     }
   });
+
+  // Workspace handlers
+  ipcMain.handle('workspace:is-open', () => workspaceManager?.isOpen() ?? false);
+  ipcMain.handle('workspace:get-folders', () => workspaceManager?.getFolders() ?? []);
+  ipcMain.handle('workspace:get-name', () => workspaceManager?.getName() ?? '');
+  ipcMain.handle('workspace:get-recent', () => workspaceManager?.getRecent() ?? []);
+  ipcMain.handle('workspace:open-folder', () => workspaceManager?.openFolder());
+  ipcMain.handle('workspace:open-from-file', () => workspaceManager?.openWorkspaceFromFile());
+  ipcMain.handle('workspace:add-folder', () => workspaceManager?.addFolderToWorkspace());
+  ipcMain.handle('workspace:save-as', () => workspaceManager?.saveWorkspaceAs());
+  ipcMain.handle('workspace:close', () => workspaceManager?.closeWorkspace());
+  ipcMain.handle('workspace:remove-folder', (_e, folderPath: string) => workspaceManager?.removeFolderFromWorkspace(folderPath));
 }

@@ -66,6 +66,21 @@ const api = {
     getWorkspacePath: () => ipcRenderer.invoke('fs:get-workspace-path'),
   },
   workspace: {
+    isOpen: () => ipcRenderer.invoke('workspace:is-open'),
+    getFolders: () => ipcRenderer.invoke('workspace:get-folders'),
+    getName: () => ipcRenderer.invoke('workspace:get-name'),
+    getRecent: () => ipcRenderer.invoke('workspace:get-recent'),
+    openFolder: () => ipcRenderer.invoke('workspace:open-folder'),
+    openFromFile: () => ipcRenderer.invoke('workspace:open-from-file'),
+    addFolder: () => ipcRenderer.invoke('workspace:add-folder'),
+    saveAs: () => ipcRenderer.invoke('workspace:save-as'),
+    close: () => ipcRenderer.invoke('workspace:close'),
+    removeFolder: (path: string) => ipcRenderer.invoke('workspace:remove-folder', path),
+    onChanged: (callback: (data: any) => void) => {
+      const listener = (_event: any, data: any) => callback(data);
+      ipcRenderer.on('workspace:changed', listener);
+      return () => ipcRenderer.removeListener('workspace:changed', listener);
+    },
     ensureClaudeMd: () => ipcRenderer.invoke('workspace:ensure-claude-md'),
   },
   notifications: {

@@ -24,8 +24,7 @@ export class ExplorerPanel {
     this.el.textContent = '';
     this.el.style.cssText = 'height: 100%; overflow-y: auto; font-size: 13px; user-select: none;';
 
-    this.workspacePath = await (window as any).pmOs.fs.getWorkspacePath();
-    await (window as any).pmOs.workspace.ensureClaudeMd();
+    const folders: string[] = await (window as any).pmOs.workspace.getFolders();
 
     // Section header
     const header = document.createElement('div');
@@ -33,9 +32,34 @@ export class ExplorerPanel {
     header.textContent = 'Explorer';
     this.el.appendChild(header);
 
-    // Load root entries
-    const entries: FileEntry[] = await (window as any).pmOs.fs.readDir(this.workspacePath);
-    this.rootNodes = entries.map(e => ({ entry: e, expanded: false, children: null, depth: 0 }));
+    if (folders.length === 0) {
+      // Show "no workspace open" message
+      const msg = document.createElement('div');
+      msg.style.cssText = 'padding: 16px; color: var(--text-muted); font-size: 12px; text-align: center;';
+      msg.textContent = 'No workspace open';
+      this.el.appendChild(msg);
+      return;
+    }
+
+    this.workspacePath = folders[0]; // Use first folder as root for now
+
+    // For multi-folder workspaces, show each folder as a top-level root node
+    if (folders.length > 1) {
+      this.rootNodes = [];
+      for (const folder of folders) {
+        const folderName = folder.split('/').pop() || folder;
+        this.rootNodes.push({
+          entry: { name: folderName, path: folder, isDirectory: true },
+          expanded: false,
+          children: null,
+          depth: 0,
+        });
+      }
+    } else {
+      // Single folder: load its children as root entries
+      const entries: FileEntry[] = await (window as any).pmOs.fs.readDir(this.workspacePath);
+      this.rootNodes = entries.map(e => ({ entry: e, expanded: false, children: null, depth: 0 }));
+    }
 
     this.renderNodes(this.rootNodes, this.el);
   }

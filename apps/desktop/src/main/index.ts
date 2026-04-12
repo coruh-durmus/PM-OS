@@ -5,6 +5,8 @@ import { registerIpcHandlers } from './ipc.js';
 import { ExtensionHost } from './extension-host.js';
 import { PtyManager } from './pty-manager.js';
 import { NotificationManager } from './notification-manager.js';
+import { WorkspaceManager } from './workspace-manager.js';
+import { createAppMenu } from './app-menu.js';
 
 let wcvManager: WcvManager | null = null;
 let ptyManager: PtyManager | null = null;
@@ -16,7 +18,10 @@ app.whenReady().then(async () => {
   wcvManager = new WcvManager(mainWindow, notificationManager);
   ptyManager = new PtyManager();
   const extensionHost = new ExtensionHost();
-  registerIpcHandlers(mainWindow, wcvManager, extensionHost, ptyManager, notificationManager);
+  const workspaceManager = new WorkspaceManager();
+  workspaceManager.setWindow(mainWindow);
+  createAppMenu(workspaceManager);
+  registerIpcHandlers(mainWindow, wcvManager, extensionHost, ptyManager, notificationManager, workspaceManager);
 
   await extensionHost.loadAll();
 

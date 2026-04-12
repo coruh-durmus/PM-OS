@@ -2,6 +2,7 @@ import { ProjectsPanel } from '../internal-panels/projects-panel';
 import { AiPanel } from '../internal-panels/ai-panel';
 import { AutomationsPanel } from '../internal-panels/automations-panel';
 import { McpPanel } from '../internal-panels/mcp-panel';
+import { WelcomeScreen } from '../welcome/welcome-screen.js';
 
 interface PanelEntry {
   id: string;
@@ -146,26 +147,11 @@ export class PanelContainer {
   private buildPlaceholder(): HTMLElement {
     const wrapper = document.createElement('div');
     wrapper.className = 'panel-placeholder';
+    wrapper.style.cssText = 'position: absolute; inset: 0;';
 
-    const content = document.createElement('div');
-    content.className = 'panel-placeholder-content';
+    const welcome = new WelcomeScreen(wrapper);
+    welcome.render();
 
-    const icon = document.createElement('div');
-    icon.className = 'panel-placeholder-icon';
-    icon.textContent = '\u{1F4BB}';
-    content.appendChild(icon);
-
-    const title = document.createElement('div');
-    title.className = 'panel-placeholder-title';
-    title.textContent = 'Welcome to PM-OS';
-    content.appendChild(title);
-
-    const subtitle = document.createElement('div');
-    subtitle.className = 'panel-placeholder-subtitle';
-    subtitle.textContent = 'Select a workspace or tool from the sidebar to get started';
-    content.appendChild(subtitle);
-
-    wrapper.appendChild(content);
     return wrapper;
   }
 
