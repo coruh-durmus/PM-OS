@@ -9,9 +9,9 @@ let wcvManager: WcvManager | null = null;
 app.whenReady().then(async () => {
   const mainWindow = createMainWindow();
   wcvManager = new WcvManager(mainWindow);
-  registerIpcHandlers(mainWindow, wcvManager);
-
   const extensionHost = new ExtensionHost();
+  registerIpcHandlers(mainWindow, wcvManager, extensionHost);
+
   await extensionHost.loadAll();
 
   mainWindow.show();

@@ -1,10 +1,12 @@
 import { BrowserWindow, ipcMain, dialog } from 'electron';
 import type { WcvManager } from './wcv-manager.js';
+import type { ExtensionHost } from './extension-host.js';
 import type { PanelBounds, WebContentsViewOptions } from '@pm-os/types';
 
 export function registerIpcHandlers(
   window: BrowserWindow,
   wcv: WcvManager,
+  extensionHost?: ExtensionHost,
 ): void {
   ipcMain.handle('wcv:create', (_event, options: WebContentsViewOptions) => {
     return wcv.create(options);
@@ -36,6 +38,11 @@ export function registerIpcHandlers(
 
   ipcMain.handle('wcv:reload', (_event, id: string) => {
     wcv.reload(id);
+  });
+
+  // Extension handlers
+  ipcMain.handle('extensions:list', () => {
+    return extensionHost?.getManifests() ?? [];
   });
 
   ipcMain.handle('dialog:open-directory', async () => {
