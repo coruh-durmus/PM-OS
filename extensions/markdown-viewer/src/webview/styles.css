@@ -1,0 +1,345 @@
+/* PM-OS Markdown Viewer - Dark Theme */
+
+:root {
+  --bg-primary: #1e1e2e;
+  --bg-secondary: #181825;
+  --bg-surface: #313244;
+  --bg-hover: #45475a;
+  --text-primary: #cdd6f4;
+  --text-secondary: #a6adc8;
+  --text-muted: #6c7086;
+  --accent: #89b4fa;
+  --accent-hover: #b4d0fb;
+  --border: #45475a;
+  --green: #a6e3a1;
+  --yellow: #f9e2af;
+  --red: #f38ba8;
+  --code-bg: #11111b;
+  --blockquote-border: #89b4fa;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+/* --- Toolbar --- */
+
+#toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  gap: 8px;
+}
+
+.toolbar-group {
+  display: flex;
+  gap: 4px;
+}
+
+.toolbar-btn {
+  padding: 5px 14px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.toolbar-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.toolbar-btn.active {
+  background: var(--accent);
+  color: var(--bg-primary);
+  border-color: var(--accent);
+}
+
+/* --- Content area --- */
+
+#content {
+  display: flex;
+  height: calc(100vh - 45px);
+  overflow: hidden;
+}
+
+.view {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 32px;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* Split mode layout */
+#content.mode-split #rendered-view,
+#content.mode-split #source-view {
+  flex: 1;
+  width: 50%;
+}
+
+#content.mode-split #source-view {
+  border-left: 1px solid var(--border);
+}
+
+/* --- Source view --- */
+
+#source-view {
+  background: var(--code-bg);
+  color: var(--text-primary);
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', Menlo, Consolas, monospace;
+  font-size: 14px;
+  line-height: 1.7;
+  border: none;
+  resize: none;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+#source-view:focus {
+  outline: none;
+}
+
+/* --- Rendered markdown styles --- */
+
+#rendered-view h1,
+#rendered-view h2,
+#rendered-view h3,
+#rendered-view h4,
+#rendered-view h5,
+#rendered-view h6 {
+  margin-top: 1.4em;
+  margin-bottom: 0.6em;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--text-primary);
+}
+
+#rendered-view h1 { font-size: 2em; border-bottom: 1px solid var(--border); padding-bottom: 0.3em; }
+#rendered-view h2 { font-size: 1.5em; border-bottom: 1px solid var(--border); padding-bottom: 0.25em; }
+#rendered-view h3 { font-size: 1.25em; }
+#rendered-view h4 { font-size: 1.1em; }
+#rendered-view h5 { font-size: 1em; }
+#rendered-view h6 { font-size: 0.9em; color: var(--text-secondary); }
+
+#rendered-view p {
+  margin-bottom: 1em;
+}
+
+/* Links */
+#rendered-view a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+#rendered-view a:hover {
+  color: var(--accent-hover);
+  text-decoration: underline;
+}
+
+/* Lists */
+#rendered-view ul,
+#rendered-view ol {
+  margin-bottom: 1em;
+  padding-left: 2em;
+}
+
+#rendered-view li {
+  margin-bottom: 0.3em;
+}
+
+#rendered-view li > ul,
+#rendered-view li > ol {
+  margin-bottom: 0;
+}
+
+/* Task lists (GFM) */
+#rendered-view ul.contains-task-list {
+  list-style: none;
+  padding-left: 0;
+}
+
+#rendered-view li.task-list-item {
+  position: relative;
+  padding-left: 1.6em;
+}
+
+#rendered-view li.task-list-item input[type="checkbox"] {
+  position: absolute;
+  left: 0;
+  top: 0.35em;
+  accent-color: var(--accent);
+}
+
+/* Inline code */
+#rendered-view code {
+  background: var(--bg-surface);
+  padding: 0.15em 0.4em;
+  border-radius: 3px;
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', Menlo, Consolas, monospace;
+  font-size: 0.9em;
+  color: var(--yellow);
+}
+
+/* Code blocks */
+#rendered-view pre {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 16px;
+  margin-bottom: 1em;
+  overflow-x: auto;
+}
+
+#rendered-view pre code {
+  background: none;
+  padding: 0;
+  border-radius: 0;
+  color: var(--text-primary);
+  font-size: 0.88em;
+  line-height: 1.6;
+}
+
+/* Blockquotes */
+#rendered-view blockquote {
+  border-left: 4px solid var(--blockquote-border);
+  margin: 0 0 1em 0;
+  padding: 0.5em 1em;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  border-radius: 0 4px 4px 0;
+}
+
+#rendered-view blockquote p:last-child {
+  margin-bottom: 0;
+}
+
+/* Tables (GFM) */
+#rendered-view table {
+  border-collapse: collapse;
+  width: 100%;
+  margin-bottom: 1em;
+}
+
+#rendered-view th,
+#rendered-view td {
+  border: 1px solid var(--border);
+  padding: 8px 12px;
+  text-align: left;
+}
+
+#rendered-view th {
+  background: var(--bg-surface);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+#rendered-view tr:nth-child(even) {
+  background: var(--bg-secondary);
+}
+
+#rendered-view tr:hover {
+  background: var(--bg-hover);
+}
+
+/* Horizontal rules */
+#rendered-view hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 2em 0;
+}
+
+/* Images */
+#rendered-view img {
+  max-width: 100%;
+  border-radius: 6px;
+  margin: 0.5em 0;
+}
+
+/* Strong / Emphasis */
+#rendered-view strong {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+#rendered-view em {
+  font-style: italic;
+}
+
+/* Mermaid diagrams */
+.mermaid-diagram {
+  margin: 1em 0;
+  text-align: center;
+}
+
+.mermaid-diagram svg {
+  max-width: 100%;
+}
+
+/* --- Print / PDF export --- */
+
+@media print {
+  #toolbar {
+    display: none;
+  }
+
+  body {
+    background: white;
+    color: #1a1a1a;
+  }
+
+  #content {
+    height: auto;
+  }
+
+  #rendered-view {
+    padding: 0;
+  }
+
+  #source-view {
+    display: none !important;
+  }
+
+  #rendered-view a {
+    color: #0066cc;
+  }
+
+  #rendered-view pre {
+    background: #f5f5f5;
+    border-color: #ddd;
+  }
+
+  #rendered-view code {
+    background: #f0f0f0;
+    color: #333;
+  }
+
+  #rendered-view blockquote {
+    background: #f9f9f9;
+    border-left-color: #0066cc;
+    color: #555;
+  }
+
+  #rendered-view th {
+    background: #eee;
+  }
+}

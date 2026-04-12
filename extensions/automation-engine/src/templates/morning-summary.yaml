@@ -1,0 +1,16 @@
+name: "Morning Standup Summary"
+schedule: "0 9 * * 1-5"
+enabled: true
+actions:
+  - type: summarize_slack
+    params:
+      channels: ["#product-team", "#engineering"]
+      timeframe: "since yesterday 5pm"
+  - type: draft_notion
+    params:
+      template: "standup-summary"
+      destination: "Standups/{{date}}"
+  - type: notify
+    params:
+      title: "Standup Summary Ready"
+      body: "Your morning standup summary has been generated."

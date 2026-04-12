@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Context Bar</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div id="context-bar" class="context-bar">
+
+    <!-- Header: panel title + collapse toggle -->
+    <header class="cb-header">
+      <button class="cb-collapse-toggle" aria-label="Toggle context bar" title="Toggle context bar">
+        <span class="cb-collapse-icon">&#9660;</span>
+      </button>
+      <div class="cb-header-text">
+        <h2 class="cb-title" id="panel-title">No panel selected</h2>
+        <span class="cb-url" id="panel-url"></span>
+      </div>
+    </header>
+
+    <!-- Collapsible body -->
+    <div class="cb-body" id="cb-body">
+
+      <!-- Summary section -->
+      <section class="cb-section">
+        <h3 class="cb-section-title">Summary</h3>
+
+        <div class="cb-loading" id="loading-indicator" hidden>
+          <span class="dot"></span>
+          <span class="dot"></span>
+          <span class="dot"></span>
+        </div>
+
+        <div class="cb-summary" id="summary-content">
+          <p class="cb-placeholder">Select a panel or click Summarize to begin.</p>
+        </div>
+      </section>
+
+      <!-- Actions section -->
+      <section class="cb-section">
+        <h3 class="cb-section-title">Actions</h3>
+        <div class="cb-actions" id="action-grid"></div>
+      </section>
+    </div>
+  </div>
+
+  <script src="./context-bar-ui.js"></script>
+</body>
+</html>

@@ -1,0 +1,31 @@
+{
+  "name": "@pm-os/ai-assistant",
+  "version": "0.1.0",
+  "private": true,
+  "displayName": "PM-OS AI Assistant",
+  "description": "AI-powered chat assistant with skills for summarization, drafting, and more",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "esbuild src/index.ts --bundle --platform=node --format=esm --external:@anthropic-ai/sdk --outfile=dist/index.js --sourcemap && esbuild src/webview/chat-ui.ts --bundle --platform=browser --format=esm --outfile=dist/webview/chat-ui.js --sourcemap && cp src/webview/index.html dist/webview/index.html && cp src/webview/styles.css dist/webview/styles.css",
+    "clean": "rm -rf dist",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@pm-os/types": "workspace:*",
+    "@pm-os/event-bus": "workspace:*",
+    "@pm-os/claude": "workspace:*"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.1.0"
+  }
+}

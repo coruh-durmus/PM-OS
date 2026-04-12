@@ -1,0 +1,28 @@
+{
+  "name": "@pm-os/auth",
+  "version": "0.1.0",
+  "private": true,
+  "displayName": "PM-OS Auth",
+  "description": "Authentication and credential management for PM-OS",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "esbuild src/index.ts --bundle --platform=node --external:electron --outfile=dist/index.js --sourcemap",
+    "clean": "rm -rf dist",
+    "test": "echo 'No tests yet'"
+  },
+  "dependencies": {
+    "@pm-os/types": "workspace:*"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0",
+    "typescript": "^5.7.0"
+  }
+}

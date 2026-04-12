@@ -1,0 +1,227 @@
+/* ── PM-OS AI Context Bar ──────────────────────────────────────── */
+/* Dark theme, 280px max-width sidebar panel                       */
+
+:root {
+  --cb-bg: #1e1e2e;
+  --cb-surface: #262637;
+  --cb-border: #363649;
+  --cb-text: #cdd6f4;
+  --cb-text-muted: #a6adc8;
+  --cb-accent: #89b4fa;
+  --cb-accent-hover: #b4d0fb;
+  --cb-btn-bg: #313244;
+  --cb-btn-hover: #45475a;
+  --cb-radius: 6px;
+  --cb-gap: 8px;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
+    Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--cb-text);
+  background: var(--cb-bg);
+}
+
+/* ── Container ──────────────────────────────────────────────────── */
+
+.context-bar {
+  max-width: 280px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── Header ─────────────────────────────────────────────────────── */
+
+.cb-header {
+  display: flex;
+  align-items: center;
+  gap: var(--cb-gap);
+  padding: 10px 12px;
+  background: var(--cb-surface);
+  border-bottom: 1px solid var(--cb-border);
+  user-select: none;
+}
+
+.cb-collapse-toggle {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--cb-text-muted);
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 10px;
+}
+
+.cb-collapse-toggle:hover {
+  background: var(--cb-btn-hover);
+  color: var(--cb-text);
+}
+
+.cb-header-text {
+  min-width: 0;
+  flex: 1;
+}
+
+.cb-title {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cb-url {
+  display: block;
+  font-size: 11px;
+  color: var(--cb-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Body (collapsible) ─────────────────────────────────────────── */
+
+.cb-body {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+}
+
+/* ── Sections ───────────────────────────────────────────────────── */
+
+.cb-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--cb-text-muted);
+  margin-bottom: 6px;
+}
+
+/* ── Summary ────────────────────────────────────────────────────── */
+
+.cb-summary {
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.cb-summary p {
+  margin-bottom: 6px;
+}
+
+.cb-summary ul {
+  margin: 4px 0 6px 16px;
+}
+
+.cb-summary li {
+  margin-bottom: 3px;
+}
+
+.cb-summary strong {
+  color: var(--cb-accent);
+}
+
+.cb-placeholder {
+  color: var(--cb-text-muted);
+  font-style: italic;
+}
+
+/* ── Loading animation (pulsing dots) ───────────────────────────── */
+
+.cb-loading {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 0;
+}
+
+.cb-loading .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--cb-accent);
+  animation: pulse 1.4s ease-in-out infinite both;
+}
+
+.cb-loading .dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.cb-loading .dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes pulse {
+  0%,
+  80%,
+  100% {
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
+  40% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ── Action buttons grid ────────────────────────────────────────── */
+
+.cb-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.cb-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  background: var(--cb-btn-bg);
+  border: 1px solid var(--cb-border);
+  border-radius: var(--cb-radius);
+  color: var(--cb-text);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.cb-action-btn:hover {
+  background: var(--cb-btn-hover);
+  border-color: var(--cb-accent);
+}
+
+.cb-action-btn:active {
+  background: var(--cb-accent);
+  color: var(--cb-bg);
+}
+
+.cb-action-icon {
+  flex-shrink: 0;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.cb-action-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

@@ -1,0 +1,31 @@
+{
+  "name": "@pm-os/ai-context-bar",
+  "version": "0.1.0",
+  "private": true,
+  "displayName": "PM-OS AI Context Bar",
+  "description": "AI-powered context sidebar that summarizes panels and suggests actions",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "esbuild src/index.ts --bundle --platform=node --external:@anthropic-ai/sdk --external:electron --outfile=dist/index.js --sourcemap && esbuild src/webview/context-bar-ui.ts --bundle --platform=browser --outfile=dist/webview/context-bar-ui.js --sourcemap",
+    "clean": "rm -rf dist",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@pm-os/types": "workspace:*",
+    "@pm-os/event-bus": "workspace:*",
+    "@pm-os/claude": "workspace:*"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.1.0"
+  }
+}

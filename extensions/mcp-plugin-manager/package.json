@@ -1,0 +1,29 @@
+{
+  "name": "@pm-os/mcp-plugin-manager",
+  "version": "0.1.0",
+  "private": true,
+  "displayName": "PM-OS MCP Plugin Manager",
+  "description": "MCP server and plugin management for PM-OS",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "esbuild src/index.ts --bundle --platform=node --outfile=dist/index.js --sourcemap",
+    "clean": "rm -rf dist",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@pm-os/types": "workspace:*"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.1.0"
+  }
+}

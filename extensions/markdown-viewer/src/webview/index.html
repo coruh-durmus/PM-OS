@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Markdown Viewer</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="toolbar">
+    <div class="toolbar-group">
+      <button id="btn-rendered" class="toolbar-btn active" title="Rendered view">Rendered</button>
+      <button id="btn-source" class="toolbar-btn" title="Source view">Source</button>
+      <button id="btn-split" class="toolbar-btn" title="Split view">Split</button>
+    </div>
+    <div class="toolbar-group">
+      <button id="btn-export-pdf" class="toolbar-btn" title="Export as PDF">Export PDF</button>
+    </div>
+  </div>
+
+  <div id="content">
+    <div id="rendered-view" class="view"></div>
+    <textarea id="source-view" class="view hidden" spellcheck="false" readonly></textarea>
+  </div>
+
+  <script type="module" src="viewer.js"></script>
+</body>
+</html>

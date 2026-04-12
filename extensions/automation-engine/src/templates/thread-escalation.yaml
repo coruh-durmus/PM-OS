@@ -1,0 +1,14 @@
+name: "Escalated Thread Summary"
+schedule: ""
+enabled: true
+trigger:
+  type: slack_thread
+  condition: "reply_count > 10"
+actions:
+  - type: summarize_slack
+    params:
+      scope: "thread"
+  - type: notify
+    params:
+      title: "Thread Escalation"
+      body: "A thread with 10+ replies needs attention."
