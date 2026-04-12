@@ -11,8 +11,13 @@
   top: 0;
   bottom: 0;
   z-index: 5;
+  user-select: none;
 }
 
-.browser-sidebar.visible {
-  display: flex;
+.browser-sidebar [draggable=true] {
+  cursor: grab;
+}
+
+.browser-sidebar [draggable=true]:active {
+  cursor: grabbing;
 }

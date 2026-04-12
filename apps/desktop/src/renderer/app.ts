@@ -133,6 +133,11 @@ export class App {
         e.preventDefault();
         (window as any).pmOs.workspace.openFolder();
       }
+      // Cmd+B toggles browser sidebar
+      if ((e.metaKey || e.ctrlKey) && e.key === 'b') {
+        e.preventDefault();
+        this.panelContainer.toggleBrowserSidebar();
+      }
 
       // CMD+1-9 hotkeys for quick app switching
       const appHotkeys = ['slack', 'notion', 'figma', 'gmail', 'calendar', 'jira', 'confluence', 'browser'];

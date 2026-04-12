@@ -167,16 +167,27 @@ export class PanelContainer {
         },
       });
 
+      // Re-sync bounds when sidebar is toggled
+      this.browserSidebar.setOnToggle(() => {
+        this.browserSidebarVisible = this.browserSidebar!.isVisible;
+        this.syncActiveBounds();
+      });
+
       // Add initial tab
       this.browserSidebar.addTab('https://www.google.com', 'Google');
     }
 
-    this.browserSidebarEl.style.display = 'flex';
-    this.browserSidebarVisible = true;
+    this.browserSidebarVisible = !this.browserSidebar!.isCollapsed;
     this.browserSidebar!.show();
 
     // Re-sync WCV bounds to account for sidebar width
     this.syncActiveBounds();
+  }
+
+  toggleBrowserSidebar(): void {
+    if (this.browserSidebar) {
+      this.browserSidebar.toggle();
+    }
   }
 
   private hideBrowserSidebar(): void {
