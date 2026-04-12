@@ -87,10 +87,9 @@ export class WcvManager {
     // Handle popups (window.open, target="_blank")
     view.webContents.setWindowOpenHandler(({ url: openUrl }) => {
       // Allow auth popups to open in a real BrowserWindow (same session)
-      // so OAuth login flows complete properly
       try {
         const u = new URL(openUrl);
-        const authDomains = ['accounts.google.com', 'appleid.apple.com', 'login.microsoftonline.com', 'github.com'];
+        const authDomains = ['accounts.google.com', 'appleid.apple.com', 'login.microsoftonline.com', 'github.com', 'id.atlassian.com'];
         if (authDomains.some(d => u.hostname === d || u.hostname.endsWith('.' + d))) {
           return { action: 'allow' };
         }
@@ -98,6 +97,35 @@ export class WcvManager {
       // Other popups → open in PM-OS browser tab
       this.sendToRenderer('wcv:open-url', { url: openUrl });
       return { action: 'deny' };
+    });
+
+    // When an auth popup BrowserWindow is created, monitor it.
+    // After OAuth completes, reload the parent WebContentsView
+    // so it picks up the new auth state (window.opener doesn't work
+    // between BrowserWindow and WebContentsView).
+    view.webContents.on('did-create-window', (childWindow) => {
+      const parentDomain = new URL(url).hostname;
+      childWindow.webContents.on('will-navigate', (_event, navUrl) => {
+        try {
+          const nu = new URL(navUrl);
+          // If navigating back to the parent domain (OAuth callback),
+          // close popup after a moment and reload parent
+          if (nu.hostname.includes(parentDomain) || navUrl.includes('callback') || navUrl.includes('oauth')) {
+            childWindow.webContents.once('did-finish-load', () => {
+              setTimeout(() => {
+                if (!childWindow.isDestroyed()) childWindow.close();
+                if (!view.webContents.isDestroyed()) view.webContents.reload();
+              }, 1500);
+            });
+          }
+        } catch {}
+      });
+      // Also reload parent when popup closes (user may close it manually)
+      childWindow.on('closed', () => {
+        setTimeout(() => {
+          if (!view.webContents.isDestroyed()) view.webContents.reload();
+        }, 500);
+      });
     });
 
     // Allow all permissions
