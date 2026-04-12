@@ -1,0 +1,14 @@
+.terminal-container {
+  position: absolute;
+  inset: 0;
+  padding: 4px;
+  background: #1e1e2e;
+}
+
+.terminal-container .xterm {
+  height: 100%;
+}
+
+.terminal-container .xterm-viewport {
+  overflow-y: auto !important;
+}

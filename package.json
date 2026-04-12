@@ -11,6 +11,6 @@
   },
   "engines": { "node": ">=20", "pnpm": ">=9" },
   "pnpm": {
-    "onlyBuiltDependencies": ["electron", "esbuild"]
+    "onlyBuiltDependencies": ["electron", "esbuild", "node-pty"]
   }
 }

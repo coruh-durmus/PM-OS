@@ -48,6 +48,30 @@ const api = {
       return ipcRenderer.invoke('dialog:open-directory');
     },
   },
+  terminal: {
+    create(options?: { cwd?: string }): Promise<string | null> {
+      return ipcRenderer.invoke('terminal:create', options);
+    },
+    write(id: string, data: string): Promise<void> {
+      return ipcRenderer.invoke('terminal:write', id, data);
+    },
+    resize(id: string, cols: number, rows: number): Promise<void> {
+      return ipcRenderer.invoke('terminal:resize', id, cols, rows);
+    },
+    destroy(id: string): Promise<void> {
+      return ipcRenderer.invoke('terminal:destroy', id);
+    },
+    onData(callback: (data: { id: string; data: string }) => void): () => void {
+      const listener = (_event: Electron.IpcRendererEvent, data: { id: string; data: string }) => callback(data);
+      ipcRenderer.on('terminal:data', listener);
+      return () => ipcRenderer.removeListener('terminal:data', listener);
+    },
+    onExit(callback: (data: { id: string; exitCode: number }) => void): () => void {
+      const listener = (_event: Electron.IpcRendererEvent, data: { id: string; exitCode: number }) => callback(data);
+      ipcRenderer.on('terminal:exit', listener);
+      return () => ipcRenderer.removeListener('terminal:exit', listener);
+    },
+  },
 };
 
 contextBridge.exposeInMainWorld('pmOs', api);

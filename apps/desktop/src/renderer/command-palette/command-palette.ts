@@ -71,6 +71,12 @@ export class CommandPalette {
         action: () => this.tabBar.openTab('ai-assistant', 'AI Assistant'),
       },
       {
+        id: 'open-terminal',
+        title: 'Open Terminal',
+        category: 'Tools',
+        action: () => this.tabBar.openTab('terminal', 'Terminal'),
+      },
+      {
         id: 'open-projects',
         title: 'Open Projects',
         category: 'Tools',

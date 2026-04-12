@@ -49,6 +49,11 @@ export class App {
         e.preventDefault();
         this.commandPalette.toggle();
       }
+      // Ctrl+` opens terminal
+      if (e.ctrlKey && e.key === '`') {
+        e.preventDefault();
+        this.tabBar.openTab('terminal', 'Terminal');
+      }
     });
   }
 }

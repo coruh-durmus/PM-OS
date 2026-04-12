@@ -15,6 +15,7 @@ const workspaceItems: SidebarItem[] = [
 
 const toolItems: SidebarItem[] = [
   { id: 'ai-assistant', title: 'AI Assistant', icon: '\u{2728}' },
+  { id: 'terminal', title: 'Terminal', icon: '>' },
   { id: 'projects', title: 'Projects', icon: '\u{1F4C1}' },
   { id: 'automations', title: 'Automations', icon: '\u{26A1}' },
 ];

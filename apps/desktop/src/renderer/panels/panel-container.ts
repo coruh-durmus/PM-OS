@@ -1,3 +1,5 @@
+import { TerminalPanel } from '../terminal/terminal.js';
+
 interface PanelEntry {
   id: string;
   isWcv: boolean;
@@ -7,6 +9,8 @@ interface PanelEntry {
 export class PanelContainer {
   private el: HTMLElement;
   private panels = new Map<string, PanelEntry>();
+  private terminals = new Map<string, TerminalPanel>();
+  private terminalInitialized = new Set<string>();
   private activePanelId: string | null = null;
   private resizeObserver: ResizeObserver;
   private placeholderEl: HTMLElement;
@@ -53,6 +57,13 @@ export class PanelContainer {
           show: true,
         });
         panel = { id, isWcv: true };
+      } else if (id === 'terminal') {
+        const containerEl = document.createElement('div');
+        containerEl.className = 'terminal-container';
+        const terminalPanel = new TerminalPanel(containerEl);
+        this.terminals.set(id, terminalPanel);
+        panel = { id, isWcv: false, internalEl: containerEl };
+        // init() is called after the element is appended to the DOM below
       } else {
         const internalEl = this.buildInternalPanel(id);
         panel = { id, isWcv: false, internalEl };
@@ -76,6 +87,16 @@ export class PanelContainer {
     }
 
     this.activePanelId = id;
+
+    // Initialize terminal after container is in the DOM (only once)
+    const terminal = this.terminals.get(id);
+    if (terminal && !this.terminalInitialized.has(id)) {
+      this.terminalInitialized.add(id);
+      terminal.init().catch(() => {});
+    } else if (terminal) {
+      // Focus existing terminal when switching back to it
+      terminal.focus();
+    }
   }
 
   async destroyPanel(id: string): Promise<void> {
@@ -86,6 +107,13 @@ export class PanelContainer {
       await window.pmOs.wcv.destroy(id);
     } else if (panel.internalEl && this.el.contains(panel.internalEl)) {
       this.el.removeChild(panel.internalEl);
+    }
+
+    const terminal = this.terminals.get(id);
+    if (terminal) {
+      terminal.dispose();
+      this.terminals.delete(id);
+      this.terminalInitialized.delete(id);
     }
 
     this.panels.delete(id);
