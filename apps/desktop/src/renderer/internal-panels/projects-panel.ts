@@ -2,15 +2,13 @@ import { ExplorerPanel } from './explorer-panel.js';
 
 export class ProjectsPanel {
   private el: HTMLElement;
-  private explorer: ExplorerPanel;
 
   constructor(container: HTMLElement) {
     this.el = container;
-    this.explorer = new ExplorerPanel(container);
   }
 
   async render(): Promise<void> {
-    this.el.textContent = '';
+    while (this.el.firstChild) this.el.removeChild(this.el.firstChild);
     this.el.style.cssText = 'display: flex; flex-direction: column; height: 100%;';
 
     // Header
@@ -31,7 +29,7 @@ export class ProjectsPanel {
     createBtn.style.cssText = 'width: 22px; height: 22px; background: none; border: none; color: var(--text-muted); cursor: pointer; border-radius: var(--radius-sm); font-size: 16px; display: flex; align-items: center; justify-content: center;';
     createBtn.addEventListener('mouseenter', () => createBtn.style.color = 'var(--text-primary)');
     createBtn.addEventListener('mouseleave', () => createBtn.style.color = 'var(--text-muted)');
-    createBtn.addEventListener('click', () => this.createProject());
+    createBtn.addEventListener('click', () => this.showCreateInput());
     btnRow.appendChild(createBtn);
 
     const refreshBtn = document.createElement('button');
@@ -55,14 +53,62 @@ export class ProjectsPanel {
     await explorer.render();
   }
 
-  private async createProject(): Promise<void> {
-    const name = prompt('Project name:');
-    if (!name || !name.trim()) return;
-    try {
-      await (window as any).pmOs.project.create(name.trim());
-      this.render();
-    } catch (err: any) {
-      alert('Failed to create project: ' + (err.message || err));
-    }
+  private showCreateInput(): void {
+    // Check if input already showing
+    if (this.el.querySelector('.create-project-input')) return;
+
+    const header = this.el.querySelector('div');
+    if (!header) return;
+
+    const inputRow = document.createElement('div');
+    inputRow.className = 'create-project-input';
+    inputRow.style.cssText = 'padding: 6px 12px; border-bottom: 1px solid var(--border); display: flex; gap: 6px;';
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.placeholder = 'Project name...';
+    input.style.cssText = 'flex: 1; padding: 4px 8px; background: var(--bg-primary); border: 1px solid var(--accent); border-radius: var(--radius-sm); color: var(--text-primary); font-size: 12px; outline: none; font-family: var(--font-sans);';
+
+    const confirmBtn = document.createElement('button');
+    confirmBtn.textContent = '✓';
+    confirmBtn.style.cssText = 'padding: 4px 8px; background: var(--accent); color: #1e1e2e; border: none; border-radius: var(--radius-sm); cursor: pointer; font-size: 12px; font-weight: 600;';
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = '✕';
+    cancelBtn.style.cssText = 'padding: 4px 8px; background: none; border: 1px solid var(--border); color: var(--text-muted); border-radius: var(--radius-sm); cursor: pointer; font-size: 12px;';
+
+    const doCreate = async () => {
+      const name = input.value.trim();
+      if (!name) return;
+      confirmBtn.textContent = '...';
+      confirmBtn.disabled = true;
+      try {
+        await (window as any).pmOs.project.create(name);
+        this.render();
+      } catch (err: any) {
+        input.style.borderColor = 'var(--error)';
+        input.value = '';
+        input.placeholder = 'Error: ' + (err.message || 'Failed');
+      }
+    };
+
+    const doCancel = () => {
+      inputRow.remove();
+    };
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') doCreate();
+      if (e.key === 'Escape') doCancel();
+    });
+    confirmBtn.addEventListener('click', doCreate);
+    cancelBtn.addEventListener('click', doCancel);
+
+    inputRow.appendChild(input);
+    inputRow.appendChild(confirmBtn);
+    inputRow.appendChild(cancelBtn);
+
+    // Insert after header
+    header.insertAdjacentElement('afterend', inputRow);
+    input.focus();
   }
 }
