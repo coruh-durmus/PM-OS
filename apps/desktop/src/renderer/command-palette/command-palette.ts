@@ -78,6 +78,12 @@ export class CommandPalette {
         action: () => this.tabBar.openTab('figma', 'Figma', 'https://www.figma.com'),
       },
       {
+        id: 'open-gmail',
+        title: 'Open Gmail',
+        category: 'Workspace',
+        action: () => this.tabBar.openTab('gmail', 'Gmail', 'https://mail.google.com'),
+      },
+      {
         id: 'open-ai-assistant',
         title: 'Open AI Assistant',
         category: 'Tools',

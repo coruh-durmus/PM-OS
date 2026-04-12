@@ -14,6 +14,7 @@ const topItems: ActivityItem[] = [
   { id: 'slack', title: 'Slack', icon: 'slack', url: 'https://app.slack.com' },
   { id: 'notion', title: 'Notion', icon: 'notion', url: 'https://www.notion.so' },
   { id: 'figma', title: 'Figma', icon: 'figma', url: 'https://www.figma.com' },
+  { id: 'gmail', title: 'Gmail', icon: 'gmail', url: 'https://mail.google.com' },
   { id: 'browser', title: 'Browser', icon: 'browser', url: 'https://www.google.com' },
 ];
 
