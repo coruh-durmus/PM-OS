@@ -42,6 +42,10 @@ export function registerIpcHandlers(
     wcv.goForward(id);
   });
 
+  ipcMain.handle('wcv:open-devtools', (_event, id: string) => {
+    wcv.openDevTools(id);
+  });
+
   ipcMain.handle('wcv:reload', (_event, id: string) => {
     wcv.reload(id);
   });

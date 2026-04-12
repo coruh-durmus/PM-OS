@@ -1,4 +1,3 @@
-import path from 'path';
 import { BrowserWindow, WebContentsView } from 'electron';
 import type { PanelBounds, WebContentsViewOptions, WebContentsViewState } from '@pm-os/types';
 import type { NotificationManager } from './notification-manager.js';
@@ -25,7 +24,6 @@ export class WcvManager {
     const { id, url, partition, bounds, show } = options;
 
     if (this.views.has(id)) {
-      // Already exists — navigate to the URL instead
       this.navigate(id, url);
       return id;
     }
@@ -35,18 +33,15 @@ export class WcvManager {
         partition: partition ?? `persist:${id}`,
         contextIsolation: true,
         nodeIntegration: false,
-        sandbox: true,
       },
     });
 
-    const managed: ManagedView = {
-      view,
-      id,
-      currentUrl: url,
-      title: '',
-      loading: true,
-    };
+    // Set user agent to Chrome (not Electron) so sites like Figma/Google
+    // don't use FedCM or other APIs that Electron doesn't support
+    const chromeUa = view.webContents.getUserAgent().replace(/\s*Electron\/\S+/, '');
+    view.webContents.setUserAgent(chromeUa);
 
+    const managed: ManagedView = { view, id, currentUrl: url, title: '', loading: true };
     this.views.set(id, managed);
     this.window.contentView.addChildView(view);
 
@@ -56,7 +51,7 @@ export class WcvManager {
       view.setBounds({ x: 0, y: 0, width: 0, height: 0 });
     }
 
-    // Listen for navigation changes
+    // Navigation events
     view.webContents.on('did-navigate', (_event, navigatedUrl) => {
       managed.currentUrl = navigatedUrl;
       this.sendToRenderer('wcv:url-changed', { id, url: navigatedUrl });
@@ -67,13 +62,18 @@ export class WcvManager {
       this.sendToRenderer('wcv:url-changed', { id, url: navigatedUrl });
     });
 
-    // Listen for title changes
     view.webContents.on('page-title-updated', (_event, title) => {
       managed.title = title;
       this.sendToRenderer('wcv:title-changed', { id, title });
+
+      // Non-invasive notification detection via title changes
+      const countMatch = title.match(/^\((\d+)\)/);
+      if (countMatch && this.notificationManager) {
+        const appName = this.getAppName(id);
+        this.notificationManager.addNotification(id, appName, `New activity in ${appName}`, title);
+      }
     });
 
-    // Listen for loading state changes
     view.webContents.on('did-start-loading', () => {
       managed.loading = true;
       this.sendToRenderer('wcv:loading', { id, loading: true });
@@ -84,39 +84,31 @@ export class WcvManager {
       this.sendToRenderer('wcv:loading', { id, loading: false });
     });
 
-    // Intercept new window requests (e.g., target="_blank" links)
-    // Open them in PM-OS browser tab instead of system browser
+    // Popups: open in PM-OS browser tab instead of system browser
     view.webContents.setWindowOpenHandler(({ url: openUrl }) => {
       this.sendToRenderer('wcv:open-url', { url: openUrl });
       return { action: 'deny' };
     });
 
-    // Grant all permissions for embedded apps (notifications, media, WebAuthn/passkeys, etc.)
-    view.webContents.session.setPermissionRequestHandler((_webContents, permission, callback) => {
-      callback(true);
-    });
+    // Allow all permissions
+    view.webContents.session.setPermissionRequestHandler((_wc, _perm, cb) => cb(true));
+    view.webContents.session.setPermissionCheckHandler(() => true);
 
-    // Also allow permission checks (needed for WebAuthn/passkeys)
-    view.webContents.session.setPermissionCheckHandler(() => {
-      return true;
-    });
-
-    // Capture page title changes as a proxy for notifications
-    // (non-invasive: no preload injection that could break sites like Figma)
-    let lastTitle = '';
-    view.webContents.on('page-title-updated', (_event, title) => {
-      // Many apps update the title with notification counts, e.g., "(3) Slack"
-      const countMatch = title.match(/^\((\d+)\)/);
-      if (countMatch && this.notificationManager && title !== lastTitle) {
-        const appName = this.getAppName(id);
-        this.notificationManager.addNotification(id, appName, `New activity in ${appName}`, title);
+    // Log console errors from the embedded page
+    view.webContents.on('console-message', (_event, level, message, line, sourceId) => {
+      if (level >= 2) { // warnings and errors
+        console.error(`[${id}:console] ${message} (${sourceId}:${line})`);
       }
-      lastTitle = title;
     });
 
-    // Load the URL
+    // Log render process crashes
+    view.webContents.on('render-process-gone', (_event, details) => {
+      console.error(`[${id}:crash] Render process gone:`, details.reason, details.exitCode);
+    });
+
+    // Load
     view.webContents.loadURL(url).catch((err) => {
-      console.error(`[WcvManager] Failed to load URL for ${id}:`, err);
+      console.error(`[WcvManager] Failed to load ${id}:`, err);
     });
 
     return id;
@@ -132,9 +124,7 @@ export class WcvManager {
   }
 
   setBounds(id: string, bounds: PanelBounds): void {
-    const managed = this.views.get(id);
-    if (!managed) return;
-    managed.view.setBounds(bounds);
+    this.views.get(id)?.view.setBounds(bounds);
   }
 
   destroy(id: string): void {
@@ -159,25 +149,19 @@ export class WcvManager {
   }
 
   goBack(id: string): void {
-    const managed = this.views.get(id);
-    if (!managed) return;
-    if (managed.view.webContents.canGoBack()) {
-      managed.view.webContents.goBack();
-    }
+    this.views.get(id)?.view.webContents.goBack();
   }
 
   goForward(id: string): void {
-    const managed = this.views.get(id);
-    if (!managed) return;
-    if (managed.view.webContents.canGoForward()) {
-      managed.view.webContents.goForward();
-    }
+    this.views.get(id)?.view.webContents.goForward();
   }
 
   reload(id: string): void {
-    const managed = this.views.get(id);
-    if (!managed) return;
-    managed.view.webContents.reload();
+    this.views.get(id)?.view.webContents.reload();
+  }
+
+  openDevTools(id: string): void {
+    this.views.get(id)?.view.webContents.openDevTools({ mode: 'detach' });
   }
 
   destroyAll(): void {
