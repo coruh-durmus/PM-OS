@@ -84,8 +84,18 @@ export class WcvManager {
       this.sendToRenderer('wcv:loading', { id, loading: false });
     });
 
-    // Popups: open in PM-OS browser tab instead of system browser
+    // Handle popups (window.open, target="_blank")
     view.webContents.setWindowOpenHandler(({ url: openUrl }) => {
+      // Allow auth popups to open in a real BrowserWindow (same session)
+      // so OAuth login flows complete properly
+      try {
+        const u = new URL(openUrl);
+        const authDomains = ['accounts.google.com', 'appleid.apple.com', 'login.microsoftonline.com', 'github.com'];
+        if (authDomains.some(d => u.hostname === d || u.hostname.endsWith('.' + d))) {
+          return { action: 'allow' };
+        }
+      } catch {}
+      // Other popups → open in PM-OS browser tab
       this.sendToRenderer('wcv:open-url', { url: openUrl });
       return { action: 'deny' };
     });

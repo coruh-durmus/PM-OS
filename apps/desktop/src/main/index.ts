@@ -1,5 +1,11 @@
 import { app } from 'electron';
 import { createMainWindow } from './window.js';
+
+// Disable FedCM (Federated Credential Management) — Electron doesn't fully
+// support it, and Google Sign-In / Figma crash when it's partially available.
+// This makes Google fall back to standard OAuth popup flow which works fine.
+app.commandLine.appendSwitch('disable-features', 'FedCm,FedCmButtonMode,FedCmIdpSigninStatus,FedCmMultipleIdentityProviders');
+
 import { WcvManager } from './wcv-manager.js';
 import { registerIpcHandlers } from './ipc.js';
 import { ExtensionHost } from './extension-host.js';
