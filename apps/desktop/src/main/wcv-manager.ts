@@ -36,9 +36,11 @@ export class WcvManager {
       },
     });
 
-    // Set user agent to Chrome (not Electron) so sites like Figma/Google
-    // don't use FedCM or other APIs that Electron doesn't support
-    const chromeUa = view.webContents.getUserAgent().replace(/\s*Electron\/\S+/, '');
+    // Strip Electron and app name from user-agent so sites serve standard
+    // web flows (not FedCM or other unsupported Electron-specific APIs)
+    const chromeUa = view.webContents.getUserAgent()
+      .replace(/\s*Electron\/\S+/, '')
+      .replace(/\s*@pm-os\/\S+/, '');
     view.webContents.setUserAgent(chromeUa);
 
     const managed: ManagedView = { view, id, currentUrl: url, title: '', loading: true };
@@ -85,16 +87,21 @@ export class WcvManager {
     });
 
     // Handle popups (window.open, target="_blank")
+    const parentHostname = new URL(url).hostname;
     view.webContents.setWindowOpenHandler(({ url: openUrl }) => {
-      // Allow auth popups to open in a real BrowserWindow (same session)
       try {
         const u = new URL(openUrl);
+        // Allow same-domain popups (SSO flows like figma.com/start_google_sso)
+        if (u.hostname === parentHostname || u.hostname.endsWith('.' + parentHostname)) {
+          return { action: 'allow' };
+        }
+        // Allow auth provider popups
         const authDomains = ['accounts.google.com', 'appleid.apple.com', 'login.microsoftonline.com', 'github.com', 'id.atlassian.com'];
         if (authDomains.some(d => u.hostname === d || u.hostname.endsWith('.' + d))) {
           return { action: 'allow' };
         }
       } catch {}
-      // Other popups → open in PM-OS browser tab
+      // Other popups → open in PM-OS browser panel
       this.sendToRenderer('wcv:open-url', { url: openUrl });
       return { action: 'deny' };
     });
@@ -137,10 +144,6 @@ export class WcvManager {
     view.webContents.on('render-process-gone', (_event, details) => {
       console.error(`[${id}:crash] Render process gone:`, details.reason, details.exitCode);
     });
-
-    // Clear any stale cache/service workers before loading
-    view.webContents.session.clearCache().catch(() => {});
-    view.webContents.session.clearStorageData({ storages: ['serviceworkers'] }).catch(() => {});
 
     // Log detailed load events
     view.webContents.on('did-fail-load', (_event, errorCode, errorDesc, validatedURL) => {
