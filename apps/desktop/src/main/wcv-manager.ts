@@ -99,28 +99,20 @@ export class WcvManager {
       return { action: 'deny' };
     });
 
-    // When an auth popup BrowserWindow is created, monitor it.
-    // After OAuth completes, reload the parent WebContentsView
-    // so it picks up the new auth state (window.opener doesn't work
-    // between BrowserWindow and WebContentsView).
+    // When an auth popup closes (user completes or cancels OAuth),
+    // reload the parent so it picks up the new auth cookies.
+    // DON'T intercept navigation or close popups early — let the
+    // OAuth callback complete naturally in the popup.
     view.webContents.on('did-create-window', (childWindow) => {
-      const parentDomain = new URL(url).hostname;
-      childWindow.webContents.on('will-navigate', (_event, navUrl) => {
-        try {
-          const nu = new URL(navUrl);
-          // If navigating back to the parent domain (OAuth callback),
-          // close popup after a moment and reload parent
-          if (nu.hostname.includes(parentDomain) || navUrl.includes('callback') || navUrl.includes('oauth')) {
-            childWindow.webContents.once('did-finish-load', () => {
-              setTimeout(() => {
-                if (!childWindow.isDestroyed()) childWindow.close();
-                if (!view.webContents.isDestroyed()) view.webContents.reload();
-              }, 1500);
-            });
-          }
-        } catch {}
-      });
-      // Also reload parent when popup closes (user may close it manually)
+      // Strip Electron from popup user-agent too
+      const popupUa = childWindow.webContents.getUserAgent().replace(/\s*Electron\/\S+/, '');
+      childWindow.webContents.setUserAgent(popupUa);
+
+      // Grant permissions in popup
+      childWindow.webContents.session.setPermissionRequestHandler((_wc, _perm, cb) => cb(true));
+      childWindow.webContents.session.setPermissionCheckHandler(() => true);
+
+      // Only reload parent AFTER popup fully closes
       childWindow.on('closed', () => {
         setTimeout(() => {
           if (!view.webContents.isDestroyed()) view.webContents.reload();
@@ -132,19 +124,35 @@ export class WcvManager {
     view.webContents.session.setPermissionRequestHandler((_wc, _perm, cb) => cb(true));
     view.webContents.session.setPermissionCheckHandler(() => true);
 
-    // Log console errors from the embedded page
+    // Log ALL console messages from embedded pages for debugging
     view.webContents.on('console-message', (_event, level, message, line, sourceId) => {
-      if (level >= 2) { // warnings and errors
-        console.error(`[${id}:console] ${message} (${sourceId}:${line})`);
-      }
+      const prefix = level === 0 ? 'DEBUG' : level === 1 ? 'INFO' : level === 2 ? 'WARN' : 'ERROR';
+      console.log(`[${id}:${prefix}] ${message} (${sourceId}:${line})`);
     });
+
+    // Log the user agent being used
+    console.log(`[${id}:ua] ${view.webContents.getUserAgent()}`);
 
     // Log render process crashes
     view.webContents.on('render-process-gone', (_event, details) => {
       console.error(`[${id}:crash] Render process gone:`, details.reason, details.exitCode);
     });
 
+    // Clear any stale cache/service workers before loading
+    view.webContents.session.clearCache().catch(() => {});
+    view.webContents.session.clearStorageData({ storages: ['serviceworkers'] }).catch(() => {});
+
+    // Log detailed load events
+    view.webContents.on('did-fail-load', (_event, errorCode, errorDesc, validatedURL) => {
+      console.error(`[${id}:load-fail] ${errorCode} ${errorDesc} at ${validatedURL}`);
+    });
+
+    view.webContents.on('did-finish-load', () => {
+      console.log(`[${id}:loaded] ${view.webContents.getURL()}`);
+    });
+
     // Load
+    console.log(`[${id}:loading] ${url}`);
     view.webContents.loadURL(url).catch((err) => {
       console.error(`[WcvManager] Failed to load ${id}:`, err);
     });
