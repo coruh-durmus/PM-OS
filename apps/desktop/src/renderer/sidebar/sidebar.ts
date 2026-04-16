@@ -26,7 +26,7 @@ const topItems: ActivityItem[] = [
 
 const bottomItems: ActivityItem[] = [
   { id: 'terminal', title: 'Terminal', icon: 'terminal', action: 'toggle-terminal' },
-  { id: 'projects', title: 'Projects', icon: 'projects', action: 'toggle-sidebar', sidebarView: 'projects' },
+  { id: 'projects', title: 'Explorer', icon: 'projects', action: 'toggle-sidebar', sidebarView: 'projects' },
   { id: 'automations', title: 'Automations', icon: 'automations' },
   { id: 'mcp', title: 'MCP Center', icon: 'mcp' },
   { id: 'notifications', title: 'Notifications', icon: 'notifications', action: 'toggle-notifications' },

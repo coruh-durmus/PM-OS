@@ -39,17 +39,17 @@
   align-items: center;
   gap: var(--space-1);
   padding: 3px 10px;
-  height: 22px;
+  height: 24px;
   font-size: 11px;
   color: var(--text-muted);
   cursor: pointer;
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-sm);
   white-space: nowrap;
   flex-shrink: 0;
   transition: color var(--transition-fast),
-              background var(--transition-fast),
-              box-shadow var(--transition-fast);
+              background var(--transition-fast);
   position: relative;
+  border-left: 2px solid transparent;
 }
 
 .terminal-tab:hover {
@@ -59,20 +59,8 @@
 
 .terminal-tab.active {
   color: var(--text-primary);
-  background: var(--accent-subtle);
-  box-shadow: var(--shadow-sm);
-}
-
-.terminal-tab.active::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 10px;
-  height: 2px;
-  border-radius: var(--radius-full);
-  background: var(--accent);
+  background: var(--bg-hover);
+  border-left-color: var(--accent);
 }
 
 .terminal-tab-name {
@@ -89,7 +77,7 @@
   background: none;
   color: var(--text-muted);
   cursor: pointer;
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -98,8 +86,7 @@
   opacity: 0;
   transition: opacity var(--transition-fast),
               background var(--transition-fast),
-              color var(--transition-fast),
-              transform var(--transition-fast);
+              color var(--transition-fast);
 }
 
 .terminal-tab:hover .terminal-tab-close,
@@ -109,9 +96,8 @@
 
 .terminal-tab-close:hover {
   opacity: 1;
-  background: var(--error);
-  color: var(--bg-primary);
-  transform: scale(1.15);
+  background: var(--error-subtle);
+  color: var(--error);
 }
 
 
@@ -119,8 +105,9 @@
 #bottom-panel-actions {
   display: flex;
   align-items: center;
-  gap: var(--space-1);
+  gap: 3px;
   flex-shrink: 0;
+  margin-left: auto;
 }
 
 #bottom-panel-actions button {
@@ -134,41 +121,33 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 13px;
   padding: 0;
   transition: color var(--transition-fast),
-              background var(--transition-fast),
-              transform var(--transition-fast);
+              background var(--transition-fast);
 }
 
 #bottom-panel-actions button:hover {
   background: var(--bg-hover);
   color: var(--text-primary);
-  transform: scale(1.08);
 }
 
-#bottom-panel-actions button:active {
-  transform: scale(0.94);
-}
-
-#bottom-panel-new-terminal {
-  font-size: 16px !important;
+#bp-new-terminal {
   color: var(--accent) !important;
 }
 
-#bottom-panel-new-terminal:hover {
+#bp-new-terminal:hover {
   background: var(--accent-subtle) !important;
 }
 
-#bottom-panel-kill-terminal {
-  font-size: 11px !important;
-}
-
-#bottom-panel-kill-terminal:hover {
+#bp-close:hover {
   color: var(--error) !important;
   background: var(--error-subtle) !important;
 }
 
-#bottom-panel-close {
-  font-size: 14px !important;
+.bp-actions-separator {
+  width: 1px;
+  height: 16px;
+  background: var(--border);
+  margin: 0 3px;
+  flex-shrink: 0;
 }

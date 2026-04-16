@@ -11,13 +11,21 @@ interface TreeNode {
   depth: number;
 }
 
+interface WorkspaceRoot {
+  name: string;
+  path: string;
+  expanded: boolean;
+  children: TreeNode[] | null;
+}
+
 export class ExplorerPanel {
   private el: HTMLElement;
-  private workspacePath: string = '';
-  private rootNodes: TreeNode[] = [];
+  private roots: WorkspaceRoot[] = [];
+  private onOpenFile?: (entry: FileEntry) => void;
 
-  constructor(container: HTMLElement) {
+  constructor(container: HTMLElement, options?: { onOpenFile?: (entry: FileEntry) => void }) {
     this.el = container;
+    this.onOpenFile = options?.onOpenFile;
   }
 
   async render(): Promise<void> {
@@ -26,14 +34,34 @@ export class ExplorerPanel {
 
     const folders: string[] = await (window as any).pmOs.workspace.getFolders();
 
-    // Section header
+    // Section header with "Add Folder" button
     const header = document.createElement('div');
-    header.style.cssText = 'padding: 8px 12px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted);';
-    header.textContent = 'Explorer';
+    header.style.cssText = 'padding: 8px 12px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center;';
+
+    const headerLabel = document.createElement('span');
+    headerLabel.textContent = 'Explorer';
+    header.appendChild(headerLabel);
+
+    if (folders.length > 0) {
+      const addFolderBtn = document.createElement('button');
+      addFolderBtn.title = 'Add Folder to Workspace';
+      addFolderBtn.style.cssText = 'width: 20px; height: 20px; border: none; background: none; color: var(--text-muted); cursor: pointer; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; padding: 0; transition: color var(--transition-fast), background var(--transition-fast);';
+      const addIcon = document.createElement('span');
+      addIcon.className = 'codicon codicon-new-folder';
+      addFolderBtn.appendChild(addIcon);
+      addFolderBtn.addEventListener('mouseenter', () => { addFolderBtn.style.color = 'var(--text-primary)'; addFolderBtn.style.background = 'var(--bg-hover)'; });
+      addFolderBtn.addEventListener('mouseleave', () => { addFolderBtn.style.color = 'var(--text-muted)'; addFolderBtn.style.background = ''; });
+      addFolderBtn.addEventListener('click', async () => {
+        await (window as any).pmOs.workspace.addFolder();
+        this.roots = [];
+        await this.render();
+      });
+      header.appendChild(addFolderBtn);
+    }
+
     this.el.appendChild(header);
 
     if (folders.length === 0) {
-      // Show "no workspace open" message
       const msg = document.createElement('div');
       msg.style.cssText = 'padding: 16px; color: var(--text-muted); font-size: 12px; text-align: center;';
       msg.textContent = 'No workspace open';
@@ -41,38 +69,76 @@ export class ExplorerPanel {
       return;
     }
 
-    this.workspacePath = folders[0]; // Use first folder as root for now
-
-    // For multi-folder workspaces, show each folder as a top-level root node
-    if (folders.length > 1) {
-      this.rootNodes = [];
+    // Build roots on first render (preserve state across re-renders)
+    if (this.roots.length === 0) {
       for (const folder of folders) {
         const folderName = folder.split('/').pop() || folder;
-        this.rootNodes.push({
-          entry: { name: folderName, path: folder, isDirectory: true },
-          expanded: false,
+        this.roots.push({
+          name: folderName,
+          path: folder,
+          expanded: folders.length === 1, // auto-expand if single folder
           children: null,
-          depth: 0,
         });
       }
-    } else {
-      // Single folder: load its children as root entries
-      const entries: FileEntry[] = await (window as any).pmOs.fs.readDir(this.workspacePath);
-      this.rootNodes = entries.map(e => ({ entry: e, expanded: false, children: null, depth: 0 }));
+      // Load children for expanded roots
+      for (const root of this.roots) {
+        if (root.expanded) {
+          await this.loadRootChildren(root);
+        }
+      }
     }
 
-    this.renderNodes(this.rootNodes, this.el);
+    // Render each workspace root
+    for (const root of this.roots) {
+      this.renderRoot(root, this.el);
+    }
+  }
+
+  private async loadRootChildren(root: WorkspaceRoot): Promise<void> {
+    const entries: FileEntry[] = await (window as any).pmOs.fs.readDir(root.path);
+    root.children = entries.map(e => ({ entry: e, expanded: false, children: null, depth: 1 }));
+  }
+
+  private renderRoot(root: WorkspaceRoot, container: HTMLElement): void {
+    // Root folder header (collapsible section)
+    const rootHeader = document.createElement('div');
+    rootHeader.style.cssText = 'padding: 4px 12px; cursor: pointer; display: flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; color: var(--text-primary); transition: background var(--transition-fast);';
+
+    rootHeader.addEventListener('mouseenter', () => { rootHeader.style.background = 'var(--bg-hover)'; });
+    rootHeader.addEventListener('mouseleave', () => { rootHeader.style.background = ''; });
+
+    // Chevron
+    const chevron = document.createElement('span');
+    chevron.className = root.expanded ? 'codicon codicon-chevron-down' : 'codicon codicon-chevron-right';
+    chevron.style.cssText = 'font-size: 10px; color: var(--text-muted); flex-shrink: 0;';
+    rootHeader.appendChild(chevron);
+
+    // Folder name
+    const nameEl = document.createElement('span');
+    nameEl.textContent = root.name;
+    rootHeader.appendChild(nameEl);
+
+    rootHeader.addEventListener('click', async () => {
+      root.expanded = !root.expanded;
+      if (root.expanded && root.children === null) {
+        await this.loadRootChildren(root);
+      }
+      await this.render();
+    });
+
+    container.appendChild(rootHeader);
+
+    // Render children and git info if expanded
+    if (root.expanded && root.children) {
+      this.renderNodes(root.children, container);
+      this.renderWorkspaceGitInfo(root.path, container);
+    }
   }
 
   private renderNodes(nodes: TreeNode[], container: HTMLElement): void {
     for (const node of nodes) {
       const row = this.createRow(node);
       container.appendChild(row);
-
-      // Show git info for top-level project directories
-      if (node.depth === 0 && node.entry.isDirectory) {
-        this.renderProjectGitInfo(node.entry.path, container);
-      }
 
       if (node.expanded && node.children) {
         const childContainer = document.createElement('div');
@@ -93,8 +159,8 @@ export class ExplorerPanel {
     if (node.entry.isDirectory) {
       // Chevron
       const chevron = document.createElement('span');
-      chevron.textContent = node.expanded ? '\u25BC' : '\u25B6';
-      chevron.style.cssText = 'font-size: 8px; width: 12px; color: var(--text-muted); flex-shrink: 0;';
+      chevron.className = node.expanded ? 'codicon codicon-chevron-down' : 'codicon codicon-chevron-right';
+      chevron.style.cssText = 'font-size: 10px; width: 12px; color: var(--text-muted); flex-shrink: 0;';
       row.appendChild(chevron);
 
       // Icon
@@ -163,11 +229,10 @@ export class ExplorerPanel {
       }
       node.expanded = true;
     }
-    // Re-render the whole tree
     await this.render();
   }
 
-  private async renderProjectGitInfo(projectPath: string, container: HTMLElement): Promise<void> {
+  private async renderWorkspaceGitInfo(projectPath: string, container: HTMLElement): Promise<void> {
     const info = await (window as any).pmOs.git.getInfo(projectPath);
 
     const bar = document.createElement('div');
@@ -196,7 +261,6 @@ export class ExplorerPanel {
     if (info.remote) {
       const remote = document.createElement('span');
       remote.style.cssText = 'color: var(--accent); cursor: pointer;';
-      // Parse GitHub URL for display
       const displayUrl = info.remote
         .replace('https://github.com/', '')
         .replace('git@github.com:', '')
@@ -212,7 +276,6 @@ export class ExplorerPanel {
         const url = prompt('Enter GitHub remote URL (e.g., https://github.com/user/repo.git):');
         if (url) {
           await (window as any).pmOs.git.setRemote(projectPath, url);
-          // Re-render to show the remote
           this.render();
         }
       });
@@ -221,7 +284,7 @@ export class ExplorerPanel {
 
     container.appendChild(bar);
 
-    // Contributors row (if any)
+    // Contributors row
     if (info.contributors && info.contributors.length > 0) {
       const contribRow = document.createElement('div');
       contribRow.style.cssText = 'padding: 0 12px 6px 28px; display: flex; gap: 4px; align-items: center; font-size: 10px; color: var(--text-muted);';
@@ -247,7 +310,7 @@ export class ExplorerPanel {
       container.appendChild(contribRow);
     }
 
-    // Last commit (if any)
+    // Last commit
     if (info.lastCommit) {
       const commitRow = document.createElement('div');
       commitRow.style.cssText = 'padding: 0 12px 8px 28px; font-size: 10px; color: var(--text-muted);';
@@ -255,7 +318,7 @@ export class ExplorerPanel {
       container.appendChild(commitRow);
     }
 
-    // Action buttons (if remote is set)
+    // Action buttons
     if (info.remote) {
       const actions = document.createElement('div');
       actions.style.cssText = 'padding: 0 12px 10px 28px; display: flex; gap: 6px;';
@@ -302,8 +365,8 @@ export class ExplorerPanel {
   }
 
   private openFile(entry: FileEntry): void {
-    // For now, log the file open action
-    // In future, this will open in an editor or markdown viewer
-    console.log('[Explorer] Open file:', entry.path);
+    if (this.onOpenFile) {
+      this.onOpenFile(entry);
+    }
   }
 }

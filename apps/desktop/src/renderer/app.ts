@@ -38,6 +38,11 @@ export class App {
 
     this.sidebarPanel = new SidebarPanel(
       document.getElementById('sidebar')!,
+      {
+        onOpenFile: (entry) => {
+          this.panelContainer.openFile(entry.path);
+        },
+      },
     );
 
     this.sidebar = new Sidebar(

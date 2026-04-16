@@ -162,7 +162,7 @@ const api = {
     },
   },
   terminal: {
-    create(options?: { cwd?: string }): Promise<string | null> {
+    create(options?: { cwd?: string; shell?: string }): Promise<string | null> {
       return ipcRenderer.invoke('terminal:create', options);
     },
     write(id: string, data: string): Promise<void> {

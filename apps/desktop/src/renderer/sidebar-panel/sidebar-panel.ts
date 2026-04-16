@@ -7,11 +7,13 @@ export class SidebarPanel {
   private resizeHandle: HTMLElement;
   private visible = false;
   private activeView: string | null = null;
+  private onOpenFile?: (entry: { name: string; path: string; isDirectory: boolean }) => void;
 
-  constructor(el: HTMLElement) {
+  constructor(el: HTMLElement, options?: { onOpenFile?: (entry: { name: string; path: string; isDirectory: boolean }) => void }) {
     this.el = el;
     this.contentEl = el.querySelector('#sidebar-content')!;
     this.resizeHandle = el.querySelector('#sidebar-resize-handle')!;
+    this.onOpenFile = options?.onOpenFile;
     this.setupResize();
   }
 
@@ -47,7 +49,7 @@ export class SidebarPanel {
 
     switch (viewId) {
       case 'projects': {
-        const panel = new ProjectsPanel(this.contentEl);
+        const panel = new ProjectsPanel(this.contentEl, { onOpenFile: this.onOpenFile });
         await panel.render();
         break;
       }

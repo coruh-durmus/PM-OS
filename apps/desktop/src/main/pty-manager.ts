@@ -27,27 +27,13 @@ export class PtyManager {
     const id = `terminal-${this.nextId++}`;
     const cwd = options?.cwd ?? os.homedir();
 
-    // Check if tmux is available
-    const tmuxPath = this.findTmux();
-
-    let shellCmd: string;
-    let shellArgs: string[];
-
-    if (tmuxPath) {
-      // Create a new tmux session with a unique name
-      const sessionName = `pm-os-${this.nextId - 1}`;
-      shellCmd = tmuxPath;
-      // Use -A to attach if session exists, create if not
-      shellArgs = ['new-session', '-A', '-s', sessionName];
-    } else {
-      // Fallback to raw shell if tmux not installed
-      shellCmd =
-        options?.shell ??
-        (os.platform() === 'win32'
-          ? 'powershell.exe'
-          : process.env.SHELL || '/bin/zsh');
-      shellArgs = [];
-    }
+    // Use the requested shell, or fall back to the user's default shell
+    const shellCmd =
+      options?.shell ??
+      (os.platform() === 'win32'
+        ? 'powershell.exe'
+        : process.env.SHELL || '/bin/zsh');
+    const shellArgs: string[] = [];
 
     const ptyProcess = pty.spawn(shellCmd, shellArgs, {
       name: 'xterm-256color',
@@ -117,18 +103,6 @@ export class PtyManager {
       safeError(`[pty] Kill failed for ${id} (already dead?):`, err);
     }
     this.sessions.delete(id);
-  }
-
-  private findTmux(): string | null {
-    try {
-      const { execFileSync } = require('child_process');
-      const result = execFileSync('which', ['tmux'], {
-        encoding: 'utf-8',
-      }).trim();
-      return result || null;
-    } catch {
-      return null;
-    }
   }
 
   destroyAll(): void {

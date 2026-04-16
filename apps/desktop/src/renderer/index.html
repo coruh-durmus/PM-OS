@@ -2,9 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; script-src 'self'" />
   <title>PM-OS</title>
   <link rel="stylesheet" href="xterm.css" />
+  <link rel="stylesheet" href="codicon.css" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -26,15 +27,21 @@
       <div id="bottom-panel" class="hidden">
         <div id="bottom-panel-resize-handle"></div>
         <div id="bottom-panel-header">
-          <span id="bottom-panel-title">TERMINAL</span>
+          <span id="bottom-panel-title">Terminal</span>
           <div id="bottom-panel-tabs"></div>
           <div id="bottom-panel-actions">
-            <button id="bottom-panel-new-terminal" title="New Terminal">+</button>
-            <button id="bottom-panel-kill-terminal" title="Kill Terminal">&#x1F5D1;</button>
-            <button id="bottom-panel-close" title="Close Panel">&times;</button>
+            <button id="bp-new-terminal" title="New Terminal"><span class="codicon codicon-plus"></span></button>
+            <button id="bp-shell-dropdown" title="Launch Shell..."><span class="codicon codicon-chevron-down"></span></button>
+            <button id="bp-context-menu" title="More Actions..."><span class="codicon codicon-ellipsis"></span></button>
+            <button id="bp-maximize" title="Maximize Panel"><span class="codicon codicon-chevron-up"></span></button>
+            <div class="bp-actions-separator"></div>
+            <button id="bp-close" title="Close Panel"><span class="codicon codicon-close"></span></button>
           </div>
         </div>
-        <div id="bottom-panel-content"></div>
+        <div id="bottom-panel-body">
+          <div id="bottom-panel-content"></div>
+          <div id="bottom-panel-instances"></div>
+        </div>
       </div>
     </div>
     <footer id="status-bar"></footer>

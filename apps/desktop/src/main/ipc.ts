@@ -82,7 +82,7 @@ export function registerIpcHandlers(
   });
 
   // Terminal handlers
-  ipcMain.handle('terminal:create', (_e, options?: { cwd?: string }) => {
+  ipcMain.handle('terminal:create', (_e, options?: { cwd?: string; shell?: string }) => {
     if (!ptyManager) return null;
     safeLog('[ipc] terminal:create', options);
     const id = ptyManager.create(options);

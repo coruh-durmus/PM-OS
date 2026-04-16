@@ -49,13 +49,13 @@ export class TerminalPanel {
     this.terminal.loadAddon(new WebLinksAddon());
   }
 
-  async init(): Promise<void> {
+  async init(options?: { shell?: string; cwd?: string }): Promise<void> {
     // Mount terminal to DOM
     this.terminal.open(this.container);
     this.fitAddon.fit();
 
     // Create PTY session
-    this.sessionId = await window.pmOs.terminal.create();
+    this.sessionId = await window.pmOs.terminal.create(options);
     if (!this.sessionId) {
       this.terminal.writeln('\x1b[31mFailed to create terminal session\x1b[0m');
       return;
@@ -110,6 +110,20 @@ export class TerminalPanel {
 
   fit(): void {
     try { this.fitAddon.fit(); } catch {}
+  }
+
+  clear(): void {
+    this.terminal.write('\x1b[2J\x1b[H');
+  }
+
+  getSelection(): string {
+    return this.terminal.getSelection();
+  }
+
+  writeText(text: string): void {
+    if (this.sessionId) {
+      window.pmOs.terminal.write(this.sessionId, text);
+    }
   }
 
   dispose(): void {

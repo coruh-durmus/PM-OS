@@ -8,17 +8,19 @@
     "build:main": "esbuild src/main/index.ts --bundle --platform=node --external:electron --external:node-pty --outfile=dist/main/index.js --sourcemap",
     "build:preload": "esbuild src/preload/index.ts --bundle --platform=node --external:electron --outfile=dist/preload/index.js --sourcemap && esbuild src/main/wcv-preload.ts --bundle --platform=node --external:electron --outfile=dist/main/wcv-preload.js --sourcemap",
     "build:renderer": "esbuild src/renderer/index.ts --bundle --platform=browser --outfile=dist/renderer/index.js --sourcemap",
-    "build:css": "cat src/renderer/styles/variables.css src/renderer/styles/reset.css src/renderer/styles/layout.css src/renderer/sidebar/sidebar.css src/renderer/panels/panels.css src/renderer/command-palette/command-palette.css src/renderer/terminal/terminal.css src/renderer/notification-center/notification-center.css src/renderer/onboarding/onboarding.css src/renderer/browser-sidebar/browser-sidebar.css src/renderer/internal-panels/extension-store-panel.css > dist/renderer/styles.css",
-    "build": "mkdir -p dist/renderer && pnpm build:main && pnpm build:preload && pnpm build:renderer && pnpm build:css && cp src/renderer/index.html dist/renderer/index.html && cp node_modules/@xterm/xterm/css/xterm.css dist/renderer/xterm.css",
+    "build:css": "cat src/renderer/styles/variables.css src/renderer/styles/reset.css src/renderer/styles/layout.css src/renderer/sidebar/sidebar.css src/renderer/panels/panels.css src/renderer/command-palette/command-palette.css src/renderer/terminal/terminal.css src/renderer/notification-center/notification-center.css src/renderer/onboarding/onboarding.css src/renderer/browser-sidebar/browser-sidebar.css src/renderer/internal-panels/extension-store-panel.css src/renderer/internal-panels/file-viewer-panel.css > dist/renderer/styles.css",
+    "build": "mkdir -p dist/renderer && pnpm build:main && pnpm build:preload && pnpm build:renderer && pnpm build:css && cp src/renderer/index.html dist/renderer/index.html && cp node_modules/@xterm/xterm/css/xterm.css dist/renderer/xterm.css && cp node_modules/@vscode/codicons/dist/codicon.css dist/renderer/codicon.css && cp node_modules/@vscode/codicons/dist/codicon.ttf dist/renderer/codicon.ttf",
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@pm-os/types": "workspace:*",
     "@pm-os/event-bus": "workspace:*",
-    "node-pty": "^1.0.0",
-    "@xterm/xterm": "^5.5.0",
+    "@pm-os/types": "workspace:*",
+    "@vscode/codicons": "^0.0.45",
     "@xterm/addon-fit": "^0.10.0",
-    "@xterm/addon-web-links": "^0.11.0"
+    "@xterm/addon-web-links": "^0.11.0",
+    "@xterm/xterm": "^5.5.0",
+    "marked": "^15.0.0",
+    "node-pty": "^1.0.0"
   },
   "devDependencies": {
     "@electron/rebuild": "^3.7.0",

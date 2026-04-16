@@ -1,10 +1,10 @@
-import { ProjectsPanel } from '../internal-panels/projects-panel';
 import { AiPanel } from '../internal-panels/ai-panel';
 import { AutomationsPanel } from '../internal-panels/automations-panel';
 import { McpPanel } from '../internal-panels/mcp-panel';
 import { ExtensionStorePanel } from '../internal-panels/extension-store-panel';
 import { WelcomeScreen } from '../welcome/welcome-screen.js';
 import { BrowserSidebar } from '../browser-sidebar/browser-sidebar.js';
+import { FileViewerPanel } from '../internal-panels/file-viewer-panel';
 
 interface PanelEntry {
   id: string;
@@ -21,6 +21,7 @@ export class PanelContainer {
   private browserSidebar: BrowserSidebar | null = null;
   private browserSidebarEl: HTMLElement | null = null;
   private browserSidebarVisible = false;
+  private fileViewer: FileViewerPanel | null = null;
 
   constructor(el: HTMLElement) {
     this.el = el;
@@ -191,6 +192,13 @@ export class PanelContainer {
     }
   }
 
+  async openFile(filePath: string): Promise<void> {
+    await this.showPanel('file-viewer');
+    if (this.fileViewer) {
+      await this.fileViewer.loadFile(filePath);
+    }
+  }
+
   private hideBrowserSidebar(): void {
     if (this.browserSidebarEl) {
       this.browserSidebarEl.style.display = 'none';
@@ -232,11 +240,6 @@ export class PanelContainer {
     wrapper.style.cssText = 'position: absolute; inset: 0; overflow: hidden;';
 
     switch (id) {
-      case 'projects': {
-        const panel = new ProjectsPanel(wrapper);
-        panel.render();
-        break;
-      }
       case 'ai-assistant': {
         const panel = new AiPanel(wrapper);
         panel.render();
@@ -255,6 +258,12 @@ export class PanelContainer {
       case 'extensions': {
         const panel = new ExtensionStorePanel(wrapper);
         panel.render();
+        break;
+      }
+      case 'file-viewer': {
+        const panel = new FileViewerPanel(wrapper);
+        panel.render();
+        this.fileViewer = panel;
         break;
       }
       default: {

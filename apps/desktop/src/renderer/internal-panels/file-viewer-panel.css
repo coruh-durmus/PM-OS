@@ -1,0 +1,307 @@
+/* PM-OS File Viewer Panel */
+
+/* --- Toolbar --- */
+
+.file-viewer-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  height: 36px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* --- Mode toggle buttons --- */
+
+.file-viewer-mode-btn {
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  font-family: inherit;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.file-viewer-mode-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.file-viewer-mode-btn.active {
+  background: var(--accent);
+  color: var(--bg-primary);
+  border-color: var(--accent);
+}
+
+/* --- Source view --- */
+
+.file-viewer-source {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.file-viewer-gutter {
+  width: 50px;
+  text-align: right;
+  padding: 16px 12px 16px 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.6;
+  user-select: none;
+  flex-shrink: 0;
+  background: var(--bg-secondary);
+  overflow: hidden;
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', Menlo, Consolas, monospace;
+}
+
+.file-viewer-code {
+  flex: 1;
+  overflow: auto;
+  padding: 16px;
+  min-width: 0;
+  background: var(--bg-primary);
+}
+
+.file-viewer-code pre {
+  margin: 0;
+  background: var(--bg-primary);
+}
+
+.file-viewer-code code {
+  white-space: pre;
+  font-size: 13px;
+  line-height: 1.6;
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', Menlo, Consolas, monospace;
+  color: var(--text-primary);
+}
+
+/* --- Empty / Error state --- */
+
+.file-viewer-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--text-muted);
+}
+
+/* --- Rendered Markdown styles --- */
+
+.file-viewer-markdown {
+  overflow-y: auto;
+  padding: 24px 32px;
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+/* Headings */
+
+.file-viewer-markdown h1,
+.file-viewer-markdown h2,
+.file-viewer-markdown h3,
+.file-viewer-markdown h4,
+.file-viewer-markdown h5,
+.file-viewer-markdown h6 {
+  margin-top: 1.4em;
+  margin-bottom: 0.6em;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--text-primary);
+}
+
+.file-viewer-markdown h1 {
+  font-size: 2em;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.3em;
+}
+
+.file-viewer-markdown h2 {
+  font-size: 1.5em;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.25em;
+}
+
+.file-viewer-markdown h3 {
+  font-size: 1.25em;
+}
+
+.file-viewer-markdown h4 {
+  font-size: 1.1em;
+}
+
+.file-viewer-markdown h5 {
+  font-size: 1em;
+}
+
+.file-viewer-markdown h6 {
+  font-size: 0.9em;
+  color: var(--text-secondary);
+}
+
+/* Paragraphs */
+
+.file-viewer-markdown p {
+  margin-bottom: 1em;
+}
+
+/* Links */
+
+.file-viewer-markdown a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.file-viewer-markdown a:hover {
+  color: var(--accent-hover);
+  text-decoration: underline;
+}
+
+/* Lists */
+
+.file-viewer-markdown ul,
+.file-viewer-markdown ol {
+  margin-bottom: 1em;
+  padding-left: 2em;
+}
+
+.file-viewer-markdown li {
+  margin-bottom: 0.3em;
+}
+
+.file-viewer-markdown li > ul,
+.file-viewer-markdown li > ol {
+  margin-bottom: 0;
+}
+
+/* Task lists (GFM) */
+
+.file-viewer-markdown ul.contains-task-list {
+  list-style: none;
+  padding-left: 0;
+}
+
+.file-viewer-markdown li.task-list-item {
+  position: relative;
+  padding-left: 1.6em;
+}
+
+.file-viewer-markdown li.task-list-item input[type="checkbox"] {
+  position: absolute;
+  left: 0;
+  top: 0.35em;
+  accent-color: var(--accent);
+}
+
+/* Inline code */
+
+.file-viewer-markdown code {
+  background: var(--bg-surface);
+  padding: 0.15em 0.4em;
+  border-radius: 3px;
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', Menlo, Consolas, monospace;
+  font-size: 0.9em;
+  color: var(--warning);
+}
+
+/* Code blocks */
+
+.file-viewer-markdown pre {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 16px;
+  margin-bottom: 1em;
+  overflow-x: auto;
+}
+
+.file-viewer-markdown pre code {
+  background: none;
+  padding: 0;
+  border-radius: 0;
+  color: var(--text-primary);
+  font-size: 0.88em;
+  line-height: 1.6;
+}
+
+/* Blockquotes */
+
+.file-viewer-markdown blockquote {
+  border-left: 4px solid var(--accent);
+  margin: 0 0 1em 0;
+  padding: 0.5em 1em;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  border-radius: 0 4px 4px 0;
+}
+
+.file-viewer-markdown blockquote p:last-child {
+  margin-bottom: 0;
+}
+
+/* Tables (GFM) */
+
+.file-viewer-markdown table {
+  border-collapse: collapse;
+  width: 100%;
+  margin-bottom: 1em;
+}
+
+.file-viewer-markdown th,
+.file-viewer-markdown td {
+  border: 1px solid var(--border);
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.file-viewer-markdown th {
+  background: var(--bg-surface);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.file-viewer-markdown tr:nth-child(even) {
+  background: var(--bg-secondary);
+}
+
+.file-viewer-markdown tr:hover {
+  background: var(--bg-hover);
+}
+
+/* Horizontal rules */
+
+.file-viewer-markdown hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 2em 0;
+}
+
+/* Images */
+
+.file-viewer-markdown img {
+  max-width: 100%;
+  border-radius: 6px;
+  margin: 0.5em 0;
+}
+
+/* Strong / Emphasis */
+
+.file-viewer-markdown strong {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.file-viewer-markdown em {
+  font-style: italic;
+}
