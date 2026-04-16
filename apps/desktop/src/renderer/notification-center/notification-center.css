@@ -1,20 +1,98 @@
+/* ─── Notification Center — slide-in panel ─── */
+
+/* Container: fixed panel, frosted glass, slides from left near activity bar */
+.notification-center {
+  position: fixed;
+  bottom: 80px;
+  left: 56px;
+  width: 360px;
+  max-height: 500px;
+  background: rgba(24, 24, 37, 0.92);
+  backdrop-filter: blur(var(--blur-md));
+  -webkit-backdrop-filter: blur(var(--blur-md));
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg),
+              0 0 0 1px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: nc-slide-in var(--transition-base) both;
+}
+
+@keyframes nc-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 .notification-center.hidden {
   display: none !important;
 }
 
+/* ─── Badge ─── */
 .notification-badge {
   position: absolute;
   top: 4px;
   right: 4px;
   min-width: 16px;
   height: 16px;
-  border-radius: 8px;
+  border-radius: var(--radius-full);
   background: var(--error);
-  color: white;
+  color: var(--text-primary);
   font-size: 9px;
   font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0 3px;
+  box-shadow: 0 0 0 2px var(--bg-secondary), var(--shadow-sm);
+  animation: badge-pulse 2s ease-in-out infinite;
+}
+
+/* badge-pulse keyframes defined in sidebar.css */
+
+/* ─── Header ─── */
+/* Styles applied inline by TS — these provide consistent base styling
+   when the inline cssText is overridden or extended in the future */
+
+/* ─── Meetings section ─── */
+/* Section containers get subtle separators via inline border-bottom from TS.
+   The meeting form class is used by TS: */
+.meeting-add-form input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.meeting-add-form button:hover {
+  filter: brightness(1.1);
+}
+
+/* ─── Settings section — app notification toggles ─── */
+/* The settings grid uses native checkboxes styled with accent-color via TS inline.
+   Provide hover enhancement for the label rows: */
+
+/* ─── Notification list ─── */
+/* Notification items are built inline by TS. Provide scrollbar styling for the list: */
+.notification-center > div:last-child::-webkit-scrollbar {
+  width: 4px;
+}
+
+.notification-center > div:last-child::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.notification-center > div:last-child::-webkit-scrollbar-thumb {
+  background: var(--bg-hover);
+  border-radius: var(--radius-full);
+}
+
+.notification-center > div:last-child::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
 }

@@ -1,16 +1,21 @@
+/* ─── Tabs ─── */
 .tab {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 0 12px;
+  gap: var(--space-2);
+  padding: 0 var(--space-3);
   height: calc(var(--tab-bar-height) - 2px);
   font-size: 12px;
   color: var(--text-secondary);
   cursor: pointer;
-  border-bottom: 2px solid transparent;
+  border-radius: var(--radius-md);
   white-space: nowrap;
-  transition: color 0.1s ease, border-color 0.1s ease;
+  transition: color var(--transition-fast),
+              background var(--transition-fast),
+              box-shadow var(--transition-fast);
   user-select: none;
+  position: relative;
+  margin: 2px 1px;
 }
 
 .tab:hover {
@@ -20,7 +25,20 @@
 
 .tab-active {
   color: var(--text-primary);
-  border-bottom-color: var(--accent);
+  background: var(--accent-subtle);
+  box-shadow: var(--shadow-sm);
+}
+
+.tab-active::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 16px;
+  height: 2px;
+  border-radius: var(--radius-full);
+  background: var(--accent);
 }
 
 .tab-title {
@@ -30,28 +48,34 @@
 }
 
 .tab-close {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 13px;
   color: var(--text-muted);
   border-radius: var(--radius-sm);
   opacity: 0;
-  transition: opacity 0.1s ease, background 0.1s ease;
+  transition: opacity var(--transition-fast),
+              background var(--transition-fast),
+              color var(--transition-fast),
+              transform var(--transition-fast);
 }
 
 .tab:hover .tab-close {
-  opacity: 1;
+  opacity: 0.7;
 }
 
 .tab-close:hover {
-  background: var(--bg-surface);
-  color: var(--text-primary);
+  opacity: 1;
+  background: var(--error);
+  color: var(--bg-primary);
+  transform: scale(1.1);
 }
 
-/* Panel placeholder */
+
+/* ─── Panel Placeholder / Welcome ─── */
 .panel-placeholder,
 .panel-internal {
   display: flex;
@@ -59,38 +83,83 @@
   justify-content: center;
   height: 100%;
   width: 100%;
+  background:
+    radial-gradient(ellipse at 50% 30%, var(--accent-subtle) 0%, transparent 70%),
+    var(--bg-primary);
 }
 
 .panel-placeholder-content,
 .panel-internal-content {
   text-align: center;
+  padding: var(--space-8);
+  max-width: 480px;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-secondary);
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: blur(var(--blur-sm));
 }
 
 .panel-placeholder-icon,
 .panel-internal-icon {
-  font-size: 48px;
-  margin-bottom: 16px;
-  opacity: 0.5;
+  font-size: 52px;
+  margin-bottom: var(--space-5);
+  opacity: 0.35;
+  filter: grayscale(0.3);
 }
 
 .panel-placeholder-title,
 .panel-internal-title {
-  font-size: 18px;
-  font-weight: 600;
+  font-size: 20px;
+  font-weight: 700;
   color: var(--text-primary);
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
+  letter-spacing: -0.3px;
 }
 
 .panel-placeholder-subtitle,
 .panel-internal-subtitle {
   font-size: 13px;
   color: var(--text-muted);
+  line-height: 1.5;
 }
 
-/* Status bar */
+
+/* ─── Keyboard shortcut hints ─── */
+.panel-placeholder kbd,
+.panel-internal kbd {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-secondary);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 1px 6px;
+  margin: 0 2px;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
+  line-height: 1.6;
+  vertical-align: middle;
+}
+
+
+/* ─── Status Bar ─── */
 .status-bar-left,
 .status-bar-right {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
+}
+
+.status-bar-left > *:not(:last-child)::after,
+.status-bar-right > *:not(:last-child)::after {
+  content: '';
+  display: inline-block;
+  width: 1px;
+  height: 12px;
+  background: var(--border);
+  margin-left: var(--space-3);
+  vertical-align: middle;
+  opacity: 0.5;
 }

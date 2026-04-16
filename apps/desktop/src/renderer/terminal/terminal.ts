@@ -104,6 +104,14 @@ export class TerminalPanel {
     this.terminal.focus();
   }
 
+  getSessionId(): string | null {
+    return this.sessionId;
+  }
+
+  fit(): void {
+    try { this.fitAddon.fit(); } catch {}
+  }
+
   dispose(): void {
     this.cleanupData?.();
     this.cleanupExit?.();

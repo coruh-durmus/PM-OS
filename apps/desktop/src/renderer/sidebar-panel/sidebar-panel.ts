@@ -1,4 +1,5 @@
 import { ProjectsPanel } from '../internal-panels/projects-panel.js';
+import { ExtensionStorePanel } from '../internal-panels/extension-store-panel.js';
 
 export class SidebarPanel {
   private el: HTMLElement;
@@ -47,6 +48,11 @@ export class SidebarPanel {
     switch (viewId) {
       case 'projects': {
         const panel = new ProjectsPanel(this.contentEl);
+        await panel.render();
+        break;
+      }
+      case 'extensions': {
+        const panel = new ExtensionStorePanel(this.contentEl);
         await panel.render();
         break;
       }

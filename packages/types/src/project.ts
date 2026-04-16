@@ -7,6 +7,8 @@ export interface ProjectConfig {
   createdAt: string;
   updatedAt: string;
   settings: ProjectSettings;
+  notionPageUrl?: string;
+  notionPageId?: string;
 }
 
 /**

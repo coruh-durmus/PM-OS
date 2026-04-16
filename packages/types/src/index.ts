@@ -7,6 +7,12 @@ export type {
   ExtensionContext,
   StateStorage,
   Extension,
+  ExtensionDependency,
+  ExtensionDependencyVariant,
+  ExtensionRegistryEntry,
+  ExtensionRegistry,
+  ExtensionInstallProgress,
+  InstalledExtensionState,
 } from './extension.js';
 
 export type {

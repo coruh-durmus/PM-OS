@@ -2,6 +2,7 @@ import { ProjectsPanel } from '../internal-panels/projects-panel';
 import { AiPanel } from '../internal-panels/ai-panel';
 import { AutomationsPanel } from '../internal-panels/automations-panel';
 import { McpPanel } from '../internal-panels/mcp-panel';
+import { ExtensionStorePanel } from '../internal-panels/extension-store-panel';
 import { WelcomeScreen } from '../welcome/welcome-screen.js';
 import { BrowserSidebar } from '../browser-sidebar/browser-sidebar.js';
 
@@ -248,6 +249,11 @@ export class PanelContainer {
       }
       case 'mcp': {
         const panel = new McpPanel(wrapper);
+        panel.render();
+        break;
+      }
+      case 'extensions': {
+        const panel = new ExtensionStorePanel(wrapper);
         panel.render();
         break;
       }

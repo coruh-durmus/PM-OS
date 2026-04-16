@@ -30,6 +30,7 @@ const bottomItems: ActivityItem[] = [
   { id: 'automations', title: 'Automations', icon: 'automations' },
   { id: 'mcp', title: 'MCP Center', icon: 'mcp' },
   { id: 'notifications', title: 'Notifications', icon: 'notifications', action: 'toggle-notifications' },
+  { id: 'extensions', title: 'Extensions', icon: 'extensions', action: 'toggle-sidebar', sidebarView: 'extensions' },
   { id: 'settings', title: 'Settings', icon: 'settings' },
 ];
 

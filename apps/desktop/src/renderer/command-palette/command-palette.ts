@@ -108,6 +108,21 @@ export class CommandPalette {
         action: () => this.bottomPanel.toggle(),
       },
       {
+        id: 'create-terminal',
+        title: 'Create New Terminal',
+        category: 'Terminal',
+        action: () => {
+          this.bottomPanel.show();
+          this.bottomPanel.createNewTerminal();
+        },
+      },
+      {
+        id: 'kill-terminal',
+        title: 'Kill Terminal',
+        category: 'Terminal',
+        action: () => this.bottomPanel.killActiveTerminal(),
+      },
+      {
         id: 'open-projects',
         title: 'Open Projects',
         category: 'Tools',

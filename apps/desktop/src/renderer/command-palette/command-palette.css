@@ -1,65 +1,127 @@
+/* ─── Command Palette — Raycast / Spotlight inspired ─── */
+
+/* Overlay: frosted dark tint with fade-in */
 .command-palette-overlay {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(var(--blur-md));
+  -webkit-backdrop-filter: blur(var(--blur-md));
+  animation: cp-overlay-in var(--transition-base) both;
 }
 
+@keyframes cp-overlay-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Dialog: elevated, translucent, rounded */
 .command-palette-dialog {
   position: absolute;
-  top: 20%;
+  top: 18%;
   left: 50%;
   transform: translateX(-50%);
-  width: 500px;
-  max-width: calc(100% - 40px);
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  width: 540px;
+  max-width: calc(100% - 48px);
+  background: rgba(24, 24, 37, 0.88);
+  backdrop-filter: blur(var(--blur-lg));
+  -webkit-backdrop-filter: blur(var(--blur-lg));
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl),
+              0 0 0 1px rgba(0, 0, 0, 0.2);
   overflow: hidden;
+  animation: cp-dialog-in var(--transition-base) both;
 }
 
+@keyframes cp-dialog-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
+}
+
+/* Input: larger, cleaner, with subtle bottom separator */
 .command-palette-input {
   width: 100%;
-  padding: 12px 16px;
+  padding: 14px 20px;
   background: transparent;
   border: none;
-  border-bottom: 1px solid var(--border);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04);
   color: var(--text-primary);
-  font-size: 14px;
+  font-size: 15px;
   outline: none;
+  caret-color: var(--accent);
 }
 
 .command-palette-input::placeholder {
   color: var(--text-muted);
 }
 
+/* Results: clean scrolling area */
 .command-palette-results {
-  max-height: 300px;
+  max-height: 340px;
   overflow-y: auto;
-  padding: 4px 0;
+  padding: var(--space-2) var(--space-2);
+  animation: cp-results-in var(--transition-base) var(--transition-fast) both;
 }
 
+@keyframes cp-results-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Thin scrollbar matching reset.css */
+.command-palette-results::-webkit-scrollbar {
+  width: 4px;
+}
+
+.command-palette-results::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.command-palette-results::-webkit-scrollbar-thumb {
+  background: var(--bg-hover);
+  border-radius: var(--radius-full);
+}
+
+/* Category headers */
 .command-palette-category {
-  padding: 6px 16px 4px;
+  padding: var(--space-3) var(--space-4) var(--space-1);
   font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.8px;
+  letter-spacing: 1px;
   color: var(--text-muted);
+  user-select: none;
 }
 
+/* Items: rounded highlight inset from edges, accent bar on selected */
 .command-palette-item {
-  padding: 8px 16px;
+  padding: 10px var(--space-4);
+  margin: 1px 0;
   font-size: 13px;
   color: var(--text-primary);
   cursor: pointer;
-  transition: background 0.1s ease;
+  border-radius: var(--radius-md);
+  border-left: 2px solid transparent;
+  transition: background var(--transition-fast),
+              border-color var(--transition-fast);
+  position: relative;
 }
 
-.command-palette-item:hover,
-.command-palette-item.selected {
+.command-palette-item:hover {
   background: var(--bg-hover);
+}
+
+.command-palette-item.selected {
+  background: var(--accent-subtle);
+  border-left-color: var(--accent);
 }

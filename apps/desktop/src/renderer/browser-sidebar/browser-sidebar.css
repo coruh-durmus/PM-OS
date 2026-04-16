@@ -1,3 +1,4 @@
+/* ─── Browser Sidebar Container ─── */
 .browser-sidebar {
   display: none;
   flex-direction: column;
@@ -12,12 +13,195 @@
   bottom: 0;
   z-index: 5;
   user-select: none;
+  transform: translateX(0);
+  transition: transform var(--transition-base),
+              opacity var(--transition-base),
+              box-shadow var(--transition-base);
+  box-shadow: 2px 0 12px rgba(0, 0, 0, 0.15);
+  font-size: 12px;
 }
 
+
+/* ─── Drag and Drop ─── */
 .browser-sidebar [draggable=true] {
   cursor: grab;
+  transition: opacity var(--transition-fast),
+              background var(--transition-fast),
+              box-shadow var(--transition-fast);
 }
 
 .browser-sidebar [draggable=true]:active {
   cursor: grabbing;
+  opacity: 0.5;
+  box-shadow: var(--shadow-md);
+}
+
+
+/* ─── Address Bar Area ─── */
+.browser-sidebar > div:first-child {
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  padding: var(--space-2);
+}
+
+.browser-sidebar input[type="text"] {
+  width: 100%;
+  padding: 6px 10px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 11px;
+  font-family: var(--font-sans);
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color var(--transition-fast),
+              box-shadow var(--transition-fast),
+              background var(--transition-fast);
+}
+
+.browser-sidebar input[type="text"]:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-subtle),
+              var(--shadow-sm);
+  background: var(--bg-secondary);
+}
+
+.browser-sidebar input[type="text"]::placeholder {
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+
+/* ─── Section Headers (Bookmarks, etc.) ─── */
+.browser-sidebar > div > div:first-child > span:first-child {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-muted);
+}
+
+
+/* ─── Sidebar Buttons (toggle, add folder, add bookmark) ─── */
+.browser-sidebar button {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px var(--space-1);
+  border-radius: var(--radius-sm);
+  transition: color var(--transition-fast),
+              background var(--transition-fast),
+              transform var(--transition-fast);
+  line-height: 1;
+}
+
+.browser-sidebar button:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+.browser-sidebar button:active {
+  transform: scale(0.92);
+}
+
+
+/* ─── Bookmark / Tab Items ─── */
+.browser-sidebar > div > div[draggable="true"],
+.browser-sidebar > div > div > div[draggable="true"] {
+  border-radius: var(--radius-sm);
+  margin: 1px var(--space-1);
+  transition: background var(--transition-fast),
+              box-shadow var(--transition-fast),
+              transform var(--transition-fast);
+}
+
+.browser-sidebar > div > div[draggable="true"]:hover,
+.browser-sidebar > div > div > div[draggable="true"]:hover {
+  background: var(--bg-hover);
+  box-shadow: var(--shadow-sm);
+}
+
+
+/* ─── Tab Items (in the tabs section) ─── */
+/* Active tab highlight */
+.browser-sidebar > div:last-child > div[style*="border-left: 2px solid var(--accent)"] {
+  background: var(--accent-subtle);
+  border-radius: var(--radius-sm);
+  margin: 1px var(--space-1);
+}
+
+
+/* ─── Folder Headers ─── */
+.browser-sidebar > div > div > div[style*="cursor: pointer"] {
+  border-radius: var(--radius-sm);
+  margin: 1px var(--space-1);
+  transition: background var(--transition-fast);
+}
+
+
+/* ─── New Tab Button ─── */
+.browser-sidebar > div:last-child > div:first-child {
+  border-radius: var(--radius-sm);
+  margin: var(--space-1);
+  transition: background var(--transition-fast),
+              color var(--transition-fast);
+}
+
+.browser-sidebar > div:last-child > div:first-child:hover {
+  background: var(--accent-subtle);
+  color: var(--accent);
+}
+
+.browser-sidebar > div:last-child > div:first-child > span:first-child {
+  font-weight: 600;
+}
+
+
+/* ─── Empty State ─── */
+.browser-sidebar > div > div[style*="font-style: italic"] {
+  opacity: 0.6;
+  text-align: center;
+  padding: var(--space-3) var(--space-2);
+}
+
+
+/* ─── Close / Delete Buttons (x) ─── */
+.browser-sidebar span[style*="opacity: 0"] {
+  transition: opacity var(--transition-fast),
+              color var(--transition-fast),
+              transform var(--transition-fast);
+}
+
+.browser-sidebar span[style*="opacity: 0"]:hover {
+  color: var(--error) !important;
+  transform: scale(1.15);
+}
+
+
+/* ─── Scrollbar ─── */
+.browser-sidebar ::-webkit-scrollbar {
+  width: 4px;
+}
+
+.browser-sidebar ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.browser-sidebar ::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: var(--radius-full);
+}
+
+.browser-sidebar ::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+
+/* ─── Drop Target Indicators ─── */
+.browser-sidebar [style*="outline: 1px solid var(--accent)"] {
+  background: var(--accent-subtle) !important;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 0 0 1px var(--accent);
 }

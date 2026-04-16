@@ -1,8 +1,20 @@
 import * as pty from 'node-pty';
 import os from 'node:os';
 
+// ---------------------------------------------------------------------------
+// Safe logging — guard against EPIPE when stdout/stderr pipe is broken
+// (e.g. after a PTY process exits and breaks the pipe).
+// ---------------------------------------------------------------------------
+function safeLog(...args: unknown[]): void {
+  try { console.log(...args); } catch {}
+}
+function safeError(...args: unknown[]): void {
+  try { console.error(...args); } catch {}
+}
+
 interface PtySession {
   pty: pty.IPty;
+  dead: boolean;
   onDataCallback?: (data: string) => void;
   onExitCallback?: (code: number) => void;
 }
@@ -45,8 +57,10 @@ export class PtyManager {
       env: { ...process.env, TERM: 'xterm-256color' } as Record<string, string>,
     });
 
-    const session: PtySession = { pty: ptyProcess };
+    const session: PtySession = { pty: ptyProcess, dead: false };
     this.sessions.set(id, session);
+
+    safeLog(`[pty] Created ${id} (shell=${shellCmd}, cwd=${cwd})`);
 
     return id;
   }
@@ -55,28 +69,53 @@ export class PtyManager {
     const session = this.sessions.get(id);
     if (!session) return;
     session.onDataCallback = callback;
-    session.pty.onData((data) => callback(data));
+    session.pty.onData((data) => {
+      try { callback(data); } catch {}
+    });
   }
 
   onExit(id: string, callback: (code: number) => void): void {
     const session = this.sessions.get(id);
     if (!session) return;
     session.onExitCallback = callback;
-    session.pty.onExit(({ exitCode }) => callback(exitCode));
+    session.pty.onExit(({ exitCode }) => {
+      session.dead = true;
+      safeLog(`[pty] Exited ${id} (code=${exitCode})`);
+      try { callback(exitCode); } catch {}
+    });
   }
 
   write(id: string, data: string): void {
-    this.sessions.get(id)?.pty.write(data);
+    const session = this.sessions.get(id);
+    if (!session || session.dead) return;
+    try {
+      session.pty.write(data);
+    } catch (err) {
+      safeError(`[pty] Write failed for ${id}:`, err);
+      session.dead = true;
+    }
   }
 
   resize(id: string, cols: number, rows: number): void {
-    this.sessions.get(id)?.pty.resize(cols, rows);
+    const session = this.sessions.get(id);
+    if (!session || session.dead) return;
+    try {
+      session.pty.resize(cols, rows);
+    } catch (err) {
+      safeError(`[pty] Resize failed for ${id}:`, err);
+    }
   }
 
   destroy(id: string): void {
     const session = this.sessions.get(id);
     if (!session) return;
-    session.pty.kill();
+    safeLog(`[pty] Destroying ${id}`);
+    try {
+      session.pty.kill();
+    } catch (err) {
+      // Process may already be dead — that is fine.
+      safeError(`[pty] Kill failed for ${id} (already dead?):`, err);
+    }
     this.sessions.delete(id);
   }
 

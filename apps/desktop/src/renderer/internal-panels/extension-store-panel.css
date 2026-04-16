@@ -1,0 +1,183 @@
+.extension-store {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.extension-store-header {
+  padding: 8px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.extension-store-header span {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+}
+
+.extension-store-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.extension-card {
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  margin-bottom: 8px;
+  background: var(--bg-surface);
+  transition: border-color 0.15s;
+}
+
+.extension-card:hover {
+  border-color: var(--accent-muted);
+}
+
+.extension-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.extension-card-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--accent);
+}
+
+.extension-card-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.extension-card-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.extension-card-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.extension-card-author {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.extension-card-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  margin-bottom: 10px;
+}
+
+.extension-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+.extension-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.extension-card-actions select {
+  padding: 4px 6px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 11px;
+  font-family: var(--font-sans);
+  outline: none;
+}
+
+.extension-install-btn {
+  padding: 5px 14px;
+  background: var(--accent);
+  color: var(--bg-primary);
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  transition: background 0.15s;
+}
+
+.extension-install-btn:hover {
+  background: var(--accent-hover);
+}
+
+.extension-install-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.extension-uninstall-btn {
+  padding: 5px 14px;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 11px;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.extension-uninstall-btn:hover {
+  color: var(--error);
+  border-color: var(--error);
+}
+
+.extension-installed-badge {
+  font-size: 11px;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.extension-progress-bar {
+  width: 100%;
+  height: 4px;
+  background: var(--bg-primary);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.extension-progress-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.extension-restart-notice {
+  font-size: 11px;
+  color: var(--warning, var(--text-muted));
+  margin-top: 6px;
+  font-style: italic;
+}

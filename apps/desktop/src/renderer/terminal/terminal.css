@@ -1,8 +1,10 @@
+/* ─── Terminal Container ─── */
 .terminal-container {
   position: absolute;
   inset: 0;
-  padding: 4px;
-  background: #1e1e2e;
+  padding: var(--space-1);
+  background: var(--bg-primary);
+  box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.2);
 }
 
 .terminal-container .xterm {
@@ -11,4 +13,162 @@
 
 .terminal-container .xterm-viewport {
   overflow-y: auto !important;
+}
+
+
+/* ─── Terminal Tab Strip ─── */
+#bottom-panel-tabs {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: hidden;
+  margin: 0 var(--space-2);
+  scrollbar-width: none;
+}
+
+#bottom-panel-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+
+/* ─── Individual Terminal Tab ─── */
+.terminal-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 3px 10px;
+  height: 22px;
+  font-size: 11px;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: color var(--transition-fast),
+              background var(--transition-fast),
+              box-shadow var(--transition-fast);
+  position: relative;
+}
+
+.terminal-tab:hover {
+  color: var(--text-secondary);
+  background: var(--bg-hover);
+}
+
+.terminal-tab.active {
+  color: var(--text-primary);
+  background: var(--accent-subtle);
+  box-shadow: var(--shadow-sm);
+}
+
+.terminal-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 10px;
+  height: 2px;
+  border-radius: var(--radius-full);
+  background: var(--accent);
+}
+
+.terminal-tab-name {
+  pointer-events: none;
+  font-weight: 500;
+}
+
+
+/* ─── Tab Close Button ─── */
+.terminal-tab-close {
+  width: 16px;
+  height: 16px;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  padding: 0;
+  opacity: 0;
+  transition: opacity var(--transition-fast),
+              background var(--transition-fast),
+              color var(--transition-fast),
+              transform var(--transition-fast);
+}
+
+.terminal-tab:hover .terminal-tab-close,
+.terminal-tab.active .terminal-tab-close {
+  opacity: 0.7;
+}
+
+.terminal-tab-close:hover {
+  opacity: 1;
+  background: var(--error);
+  color: var(--bg-primary);
+  transform: scale(1.15);
+}
+
+
+/* ─── Action Buttons ─── */
+#bottom-panel-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-shrink: 0;
+}
+
+#bottom-panel-actions button {
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  padding: 0;
+  transition: color var(--transition-fast),
+              background var(--transition-fast),
+              transform var(--transition-fast);
+}
+
+#bottom-panel-actions button:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  transform: scale(1.08);
+}
+
+#bottom-panel-actions button:active {
+  transform: scale(0.94);
+}
+
+#bottom-panel-new-terminal {
+  font-size: 16px !important;
+  color: var(--accent) !important;
+}
+
+#bottom-panel-new-terminal:hover {
+  background: var(--accent-subtle) !important;
+}
+
+#bottom-panel-kill-terminal {
+  font-size: 11px !important;
+}
+
+#bottom-panel-kill-terminal:hover {
+  color: var(--error) !important;
+  background: var(--error-subtle) !important;
+}
+
+#bottom-panel-close {
+  font-size: 14px !important;
 }

@@ -11,6 +11,10 @@ export type EventMap = {
   'ai:summary-ready': { panelId: string; summary: string };
   'automation:triggered': { automationId: string; trigger: string };
   'command:execute': { commandId: string; args?: unknown[] };
+  'meeting:detected': { panelId: string; url: string; platform: string };
+  'meeting:started': { meetingId: string };
+  'meeting:ended': { meetingId: string; duration: number };
+  'meeting:transcription-complete': { meetingId: string; transcriptPath: string };
 };
 
 /** Union of all valid event names. */

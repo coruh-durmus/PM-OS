@@ -1,4 +1,4 @@
-/* Onboarding wizard overlay */
+/* ─── Onboarding wizard overlay ─── */
 .onboarding-overlay {
   position: fixed;
   inset: 0;
@@ -10,49 +10,67 @@
   font-family: var(--font-sans);
 }
 
+/* Card: elevated, entrance animation, subtle glow */
 .onboarding-card {
   width: 560px;
   max-width: calc(100vw - 48px);
   max-height: calc(100vh - 80px);
   background: var(--bg-secondary);
   border: 1px solid var(--border);
-  border-radius: 12px;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2),
+              0 16px 48px rgba(0, 0, 0, 0.45),
+              0 0 0 1px rgba(137, 180, 250, 0.04);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  animation: ob-card-in var(--transition-slow) both;
 }
 
-/* Step indicator */
+@keyframes ob-card-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ─── Step indicator ─── */
 .onboarding-steps {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 20px 24px 0;
+  gap: var(--space-2);
+  padding: var(--space-5) var(--space-6) 0;
 }
 
 .onboarding-dot {
   width: 8px;
   height: 8px;
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   background: var(--bg-hover);
-  transition: background 0.25s ease, transform 0.25s ease;
+  transition: background var(--transition-base),
+              width var(--transition-base),
+              transform var(--transition-base);
 }
 
 .onboarding-dot.active {
+  width: 24px;
+  border-radius: var(--radius-full);
   background: var(--accent);
-  transform: scale(1.25);
 }
 
 .onboarding-dot.completed {
   background: var(--success);
 }
 
-/* Content area */
+/* ─── Content area ─── */
 .onboarding-content {
   flex: 1;
-  padding: 32px 36px 24px;
+  padding: var(--space-8) 36px var(--space-6);
   overflow-y: auto;
   min-height: 320px;
 }
@@ -61,22 +79,22 @@
   font-size: 22px;
   font-weight: 700;
   color: var(--text-primary);
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
 }
 
 .onboarding-content p {
   font-size: 14px;
   color: var(--text-secondary);
   line-height: 1.6;
-  margin-bottom: 20px;
+  margin-bottom: var(--space-5);
 }
 
-/* Welcome step */
+/* ─── Welcome step ─── */
 .onboarding-logo {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 24px;
+  margin-bottom: var(--space-6);
 }
 
 .onboarding-logo-text {
@@ -90,7 +108,7 @@
   text-align: center;
   font-size: 15px;
   color: var(--text-secondary);
-  margin-bottom: 32px;
+  margin-bottom: var(--space-8);
 }
 
 .onboarding-welcome-center {
@@ -100,12 +118,12 @@
   text-align: center;
 }
 
-/* Workspace step */
+/* ─── Workspace step ─── */
 .onboarding-workspace-row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
 }
 
 .onboarding-path-display {
@@ -129,11 +147,11 @@
   color: var(--text-muted);
 }
 
-/* App selection */
+/* ─── App selection ─── */
 .onboarding-app-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .onboarding-app-item {
@@ -145,17 +163,24 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition: border-color 0.15s ease, background 0.15s ease;
+  transition: border-color var(--transition-fast),
+              background var(--transition-fast),
+              transform var(--transition-fast),
+              box-shadow var(--transition-fast);
   user-select: none;
 }
 
 .onboarding-app-item:hover {
   background: var(--bg-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
 }
 
 .onboarding-app-item.selected {
   border-color: var(--accent);
-  background: rgba(137, 180, 250, 0.08);
+  background: var(--accent-subtle);
+  box-shadow: 0 0 0 1px var(--accent),
+              0 0 12px rgba(137, 180, 250, 0.08);
 }
 
 .onboarding-app-icon {
@@ -180,13 +205,13 @@
   width: 18px;
   height: 18px;
   border: 2px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 11px;
   color: transparent;
-  transition: all 0.15s ease;
+  transition: all var(--transition-fast);
   flex-shrink: 0;
 }
 
@@ -194,6 +219,13 @@
   background: var(--accent);
   border-color: var(--accent);
   color: var(--bg-primary);
+  animation: ob-check-pop var(--transition-base) both;
+}
+
+@keyframes ob-check-pop {
+  0%   { transform: scale(0.5); }
+  60%  { transform: scale(1.15); }
+  100% { transform: scale(1); }
 }
 
 .onboarding-hint {
@@ -202,15 +234,15 @@
   margin-top: 14px;
 }
 
-/* Claude Code step */
+/* ─── Claude Code step ─── */
 .onboarding-claude-status {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 16px;
+  gap: var(--space-3);
+  padding: var(--space-4);
   background: var(--bg-surface);
   border-radius: var(--radius-md);
-  margin-bottom: 16px;
+  margin-bottom: var(--space-4);
 }
 
 .onboarding-claude-icon {
@@ -246,24 +278,26 @@
   color: var(--text-muted);
 }
 
+/* Code block: accent left border, better line-height */
 .onboarding-code-block {
   background: var(--bg-surface);
   border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
   border-radius: var(--radius-md);
-  padding: 12px 16px;
+  padding: var(--space-3) var(--space-4);
   font-family: var(--font-mono);
   font-size: 12px;
   color: var(--accent);
   margin-bottom: 10px;
   user-select: all;
-  line-height: 1.6;
+  line-height: 1.7;
 }
 
 .onboarding-loading {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 16px;
+  padding: var(--space-4);
   color: var(--text-secondary);
   font-size: 13px;
 }
@@ -281,7 +315,7 @@
   to { transform: rotate(360deg); }
 }
 
-/* MCP step */
+/* ─── MCP step ─── */
 .onboarding-mcp-list {
   display: flex;
   flex-direction: column;
@@ -292,8 +326,8 @@
   background: var(--bg-surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  padding: 14px 16px;
-  transition: border-color 0.15s ease;
+  padding: 14px var(--space-4);
+  transition: border-color var(--transition-fast);
 }
 
 .onboarding-mcp-header {
@@ -310,10 +344,10 @@
 
 .onboarding-mcp-toggle {
   font-size: 12px;
-  padding: 4px 10px;
+  padding: var(--space-1) 10px;
   border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all var(--transition-fast);
 }
 
 .onboarding-mcp-toggle.later {
@@ -322,15 +356,15 @@
 }
 
 .onboarding-mcp-toggle.now {
-  background: rgba(137, 180, 250, 0.15);
+  background: var(--accent-muted);
   color: var(--accent);
 }
 
 .onboarding-mcp-fields {
-  margin-top: 12px;
+  margin-top: var(--space-3);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .onboarding-mcp-fields.hidden {
@@ -340,7 +374,7 @@
 .onboarding-mcp-field {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .onboarding-mcp-field label {
@@ -352,7 +386,7 @@
 }
 
 .onboarding-mcp-field input {
-  padding: 8px 10px;
+  padding: var(--space-2) 10px;
   background: var(--bg-primary);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -360,7 +394,7 @@
   font-size: 12px;
   color: var(--text-primary);
   outline: none;
-  transition: border-color 0.15s ease;
+  transition: border-color var(--transition-fast);
 }
 
 .onboarding-mcp-field input:focus {
@@ -373,12 +407,12 @@
 
 .onboarding-mcp-empty {
   text-align: center;
-  padding: 24px 16px;
+  padding: var(--space-6) var(--space-4);
   color: var(--text-muted);
   font-size: 13px;
 }
 
-/* Done step */
+/* ─── Done step ─── */
 .onboarding-done-center {
   display: flex;
   flex-direction: column;
@@ -396,23 +430,29 @@
   align-items: center;
   justify-content: center;
   font-size: 32px;
-  margin-bottom: 20px;
+  margin-bottom: var(--space-5);
 }
 
+/* Summary card */
 .onboarding-summary {
   width: 100%;
   background: var(--bg-surface);
+  border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  padding: 16px;
-  margin-top: 8px;
+  padding: var(--space-5);
+  margin-top: var(--space-2);
   text-align: left;
 }
 
 .onboarding-summary-row {
   display: flex;
   justify-content: space-between;
-  padding: 6px 0;
+  padding: var(--space-2) 0;
   font-size: 13px;
+}
+
+.onboarding-summary-row + .onboarding-summary-row {
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
 }
 
 .onboarding-summary-label {
@@ -424,32 +464,41 @@
   font-weight: 500;
 }
 
-/* Navigation footer */
+/* ─── Navigation footer ─── */
 .onboarding-nav {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 36px 24px;
-  gap: 12px;
+  padding: var(--space-4) 36px var(--space-6);
+  gap: var(--space-3);
 }
 
 .onboarding-btn {
-  padding: 10px 24px;
+  padding: 10px var(--space-6);
   border-radius: var(--radius-md);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all var(--transition-fast);
   border: none;
 }
 
+.onboarding-btn:active {
+  transform: scale(0.98);
+}
+
+.onboarding-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .onboarding-btn-primary {
-  background: var(--accent);
+  background: linear-gradient(180deg, var(--accent) 0%, var(--accent-hover) 100%);
   color: var(--bg-primary);
 }
 
 .onboarding-btn-primary:hover {
-  background: var(--accent-hover);
+  filter: brightness(1.08);
 }
 
 .onboarding-btn-secondary {
@@ -465,7 +514,7 @@
 .onboarding-btn-ghost {
   background: transparent;
   color: var(--text-muted);
-  padding: 10px 16px;
+  padding: 10px var(--space-4);
 }
 
 .onboarding-btn-ghost:hover {
@@ -476,7 +525,7 @@
   flex: 1;
 }
 
-/* Transition animation */
+/* ─── Transition animation ─── */
 .onboarding-content.fade-out {
   opacity: 0;
   transform: translateX(-12px);
@@ -491,5 +540,5 @@
 .onboarding-content.fade-in.visible {
   opacity: 1;
   transform: translateX(0);
-  transition: opacity 0.2s ease 0.05s, transform 0.2s ease 0.05s;
+  transition: opacity var(--transition-base) 0.05s, transform var(--transition-base) 0.05s;
 }

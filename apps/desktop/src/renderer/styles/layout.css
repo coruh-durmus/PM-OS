@@ -14,13 +14,15 @@
 #titlebar {
   grid-area: titlebar;
   background: var(--bg-secondary);
-  border-bottom: 1px solid var(--border);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(var(--blur-sm));
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
   -webkit-app-region: drag;
   user-select: none;
+  z-index: 5;
 }
 
 #titlebar-drag {
@@ -30,12 +32,24 @@
 }
 
 #titlebar-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  letter-spacing: 1.5px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
   z-index: 1;
   pointer-events: none;
+}
+
+/* Activity bar — icon rail on the left */
+#activity-bar {
+  grid-area: actbar;
+  background: var(--bg-secondary);
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.04);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: var(--space-2);
+  overflow: hidden;
 }
 
 /* Sidebar — collapsible side panel for explorer/projects */
@@ -45,7 +59,7 @@
   min-width: 150px;
   max-width: 500px;
   background: var(--bg-secondary);
-  border-right: 1px solid var(--border);
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
   display: flex;
   overflow: hidden;
   position: relative;
@@ -71,21 +85,29 @@
   top: 0;
   bottom: 0;
   z-index: 10;
+  transition: background var(--transition-fast);
 }
 
 #sidebar-resize-handle:hover {
   background: var(--accent);
+  box-shadow: 0 0 6px rgba(137, 180, 250, 0.3);
 }
 
-#activity-bar {
-  grid-area: actbar;
-  background: var(--bg-secondary);
-  border-right: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding-top: 6px;
-  overflow: hidden;
+#sidebar-resize-handle::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 2px;
+  height: 24px;
+  transform: translate(-50%, -50%);
+  border-radius: var(--radius-full);
+  background: transparent;
+  transition: background var(--transition-fast);
+}
+
+#sidebar-resize-handle:hover::after {
+  background: var(--accent);
 }
 
 #main-area {
@@ -114,7 +136,7 @@
   background: var(--bg-primary);
 }
 
-/* Bottom Panel (Terminal) — VS Code style */
+/* Bottom Panel (Terminal) */
 #bottom-panel {
   display: flex;
   flex-direction: column;
@@ -134,49 +156,52 @@
   cursor: ns-resize;
   background: transparent;
   flex-shrink: 0;
+  transition: background var(--transition-fast);
+  position: relative;
 }
 
 #bottom-panel-resize-handle:hover {
   background: var(--accent);
+  box-shadow: 0 0 6px rgba(137, 180, 250, 0.3);
+}
+
+#bottom-panel-resize-handle::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 24px;
+  height: 2px;
+  transform: translate(-50%, -50%);
+  border-radius: var(--radius-full);
+  background: transparent;
+  transition: background var(--transition-fast);
+}
+
+#bottom-panel-resize-handle:hover::after {
+  background: var(--accent);
 }
 
 #bottom-panel-header {
-  height: 28px;
-  min-height: 28px;
+  height: 30px;
+  min-height: 30px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 12px;
+  padding: 0 var(--space-4);
   background: var(--bg-secondary);
   border-bottom: 1px solid var(--border);
   font-size: 11px;
   user-select: none;
+  gap: 0;
 }
 
 #bottom-panel-title {
-  font-weight: 600;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--text-secondary);
-}
-
-#bottom-panel-close {
-  width: 20px;
-  height: 20px;
-  border: none;
-  background: none;
+  letter-spacing: 0.8px;
   color: var(--text-muted);
-  cursor: pointer;
-  border-radius: var(--radius-sm);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-}
-
-#bottom-panel-close:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
+  font-size: 10px;
+  flex-shrink: 0;
 }
 
 #bottom-panel-content {
@@ -189,13 +214,14 @@
   grid-area: status;
   height: var(--status-bar-height);
   background: var(--bg-secondary);
-  border-top: 1px solid var(--border);
+  box-shadow: 0 -1px 4px rgba(0, 0, 0, 0.15);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 12px;
+  padding: 0 var(--space-4);
   font-size: 11px;
   color: var(--text-muted);
+  z-index: 5;
 }
 
 #command-palette {

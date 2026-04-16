@@ -78,3 +78,58 @@ export interface Extension {
   activate(context: ExtensionContext): void | Promise<void>;
   deactivate?(): void | Promise<void>;
 }
+
+/** A dependency required by a store extension (model, runtime, etc.) */
+export interface ExtensionDependency {
+  id: string;
+  name: string;
+  size: number;
+  downloadUrl?: string;
+  optional?: boolean;
+  variants?: ExtensionDependencyVariant[];
+}
+
+export interface ExtensionDependencyVariant {
+  id: string;
+  name: string;
+  size: number;
+  downloadUrl?: string;
+}
+
+/** An extension entry in the extension store registry */
+export interface ExtensionRegistryEntry {
+  id: string;
+  name: string;
+  description: string;
+  version: string;
+  icon?: string;
+  author?: string;
+  size: number;
+  downloadUrl?: string;
+  dependencies?: ExtensionDependency[];
+}
+
+/** The full extension store registry format */
+export interface ExtensionRegistry {
+  version: number;
+  extensions: ExtensionRegistryEntry[];
+}
+
+/** Progress update during extension install */
+export interface ExtensionInstallProgress {
+  extensionId: string;
+  phase: 'downloading' | 'extracting' | 'installing-deps' | 'complete' | 'error';
+  currentItem?: string;
+  bytesDownloaded?: number;
+  bytesTotal?: number;
+  percent?: number;
+  error?: string;
+}
+
+/** Installed extension state stored on disk */
+export interface InstalledExtensionState {
+  id: string;
+  version: string;
+  installedAt: string;
+  selectedVariants?: Record<string, string>;
+}

@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "extensions": [
+    {
+      "id": "@pm-os/meeting-transcription",
+      "name": "Meeting Transcription",
+      "description": "Auto-transcribe meetings with speaker labels. Powered by Whisper + Pyannote. 100% local, no API costs.",
+      "version": "0.1.0",
+      "icon": "microphone",
+      "author": "PM-OS",
+      "size": 2048000,
+      "dependencies": [
+        {
+          "id": "whisper-model",
+          "name": "Whisper Speech Recognition Model",
+          "size": 147000000,
+          "variants": [
+            { "id": "tiny", "name": "Tiny (75MB, fastest, lower accuracy)", "size": 75000000 },
+            { "id": "base", "name": "Base (147MB, balanced)", "size": 147000000 },
+            { "id": "small", "name": "Small (488MB, better accuracy)", "size": 488000000 },
+            { "id": "medium", "name": "Medium (1.5GB, best accuracy)", "size": 1500000000 }
+          ]
+        },
+        {
+          "id": "python-runtime",
+          "name": "Python 3.11 Runtime",
+          "size": 67000000
+        },
+        {
+          "id": "pyannote-models",
+          "name": "Speaker Diarization Models",
+          "size": 180000000
+        }
+      ]
+    }
+  ]
+}

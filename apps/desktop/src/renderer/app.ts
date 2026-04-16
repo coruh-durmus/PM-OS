@@ -8,7 +8,6 @@ import { ThemePicker } from './themes/theme-picker';
 import { NotificationCenter } from './notification-center/notification-center';
 import { SidebarPanel } from './sidebar-panel/sidebar-panel';
 import { McpHealthChecker } from './internal-panels/mcp-health.js';
-import { Onboarding } from './onboarding/onboarding';
 import { MeetingMonitor } from './meeting-monitor/meeting-monitor.js';
 
 export class App {
@@ -23,15 +22,6 @@ export class App {
   private notificationCenter!: NotificationCenter;
 
   init(): void {
-    const onboarded = localStorage.getItem('pm-os-onboarded');
-    if (!onboarded) {
-      const onboarding = new Onboarding(document.getElementById('app')!);
-      onboarding.start(() => {
-        localStorage.setItem('pm-os-onboarded', 'true');
-        this.initApp();
-      });
-      return;
-    }
     this.initApp();
   }
 
@@ -100,6 +90,73 @@ export class App {
     const meetingMonitor = new MeetingMonitor();
     const mcpChecker = new McpHealthChecker();
     setTimeout(() => mcpChecker.checkAndNotify(), 5000);
+
+    // Meeting auto-detection notification
+    (window as any).pmOs.meeting.onDetected((data: { panelId: string; url: string; platform: string }) => {
+      this.showMeetingDetectedNotification(data);
+    });
+  }
+
+  private showMeetingDetectedNotification(data: { panelId: string; url: string; platform: string; workspaceOpen?: boolean }): void {
+    const el = document.createElement('div');
+    el.style.cssText = 'position: fixed; bottom: 100px; left: 56px; width: 320px; background: var(--bg-surface); border: 1px solid var(--accent); border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.4); z-index: 900; padding: 14px; font-size: 12px; animation: tooltip-enter 0.15s ease;';
+
+    const titleEl = document.createElement('div');
+    titleEl.style.cssText = 'font-weight: 600; margin-bottom: 6px; color: var(--text-primary);';
+    titleEl.textContent = `Meeting detected on ${data.platform}`;
+    el.appendChild(titleEl);
+
+    // If no workspace is open, show info message instead of countdown
+    if (data.workspaceOpen === false) {
+      const msgEl = document.createElement('div');
+      msgEl.style.cssText = 'color: var(--text-secondary); margin-bottom: 10px; line-height: 1.4;';
+      msgEl.textContent = 'Open a workspace to enable automatic transcription.';
+      el.appendChild(msgEl);
+
+      const closeBtn = document.createElement('button');
+      closeBtn.style.cssText = 'background: var(--bg-hover); border: 1px solid var(--border); border-radius: 4px; color: var(--text-primary); padding: 4px 12px; cursor: pointer; font-size: 12px;';
+      closeBtn.textContent = 'Dismiss';
+      closeBtn.addEventListener('click', () => el.remove());
+      el.appendChild(closeBtn);
+
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 8000);
+      return;
+    }
+
+    let countdown = 5;
+    let cancelled = false;
+
+    const msgEl = document.createElement('div');
+    msgEl.style.cssText = 'color: var(--text-secondary); margin-bottom: 10px;';
+    msgEl.textContent = `Transcription starting in ${countdown}s...`;
+    el.appendChild(msgEl);
+
+    const skipBtn = document.createElement('button');
+    skipBtn.style.cssText = 'background: var(--bg-hover); border: 1px solid var(--border); border-radius: 4px; color: var(--text-primary); padding: 4px 12px; cursor: pointer; font-size: 12px;';
+    skipBtn.textContent = 'Skip';
+    skipBtn.addEventListener('click', () => {
+      cancelled = true;
+      (window as any).pmOs.meeting.skipTranscription();
+      el.remove();
+    });
+    el.appendChild(skipBtn);
+
+    document.body.appendChild(el);
+
+    const timer = setInterval(() => {
+      if (cancelled) { clearInterval(timer); return; }
+      countdown--;
+      if (countdown <= 0) {
+        clearInterval(timer);
+        msgEl.textContent = 'Starting transcription...';
+        skipBtn.remove();
+        (window as any).pmOs.audio.startCapture();
+        setTimeout(() => el.remove(), 2000);
+      } else {
+        msgEl.textContent = `Transcription starting in ${countdown}s...`;
+      }
+    }, 1000);
   }
 
   private bindKeyboard(): void {
@@ -108,7 +165,11 @@ export class App {
         e.preventDefault();
         this.commandPalette.toggle();
       }
-      if (e.ctrlKey && e.key === '`') {
+      if (e.ctrlKey && e.shiftKey && e.key === '`') {
+        e.preventDefault();
+        this.bottomPanel.show();
+        this.bottomPanel.createNewTerminal();
+      } else if (e.ctrlKey && e.key === '`') {
         e.preventDefault();
         this.bottomPanel.toggle();
       }

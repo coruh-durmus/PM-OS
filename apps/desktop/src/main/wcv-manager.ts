@@ -1,6 +1,18 @@
 import { BrowserWindow, WebContentsView } from 'electron';
 import type { PanelBounds, WebContentsViewOptions, WebContentsViewState } from '@pm-os/types';
 import type { NotificationManager } from './notification-manager.js';
+import type { SessionSync } from './session-sync.js';
+import type { MeetingDetectionService } from './meeting-detection.js';
+
+// ---------------------------------------------------------------------------
+// Safe logging — guard against EPIPE when stdout/stderr pipe is broken.
+// ---------------------------------------------------------------------------
+function safeLog(...args: unknown[]): void {
+  try { console.log(...args); } catch {}
+}
+function safeError(...args: unknown[]): void {
+  try { console.error(...args); } catch {}
+}
 
 interface ManagedView {
   view: WebContentsView;
@@ -14,10 +26,14 @@ export class WcvManager {
   private views = new Map<string, ManagedView>();
   private window: BrowserWindow;
   private notificationManager: NotificationManager | null;
+  private sessionSync: SessionSync | null;
+  private meetingDetection: MeetingDetectionService | null;
 
-  constructor(window: BrowserWindow, notificationManager?: NotificationManager) {
+  constructor(window: BrowserWindow, notificationManager?: NotificationManager, sessionSync?: SessionSync, meetingDetection?: MeetingDetectionService) {
     this.window = window;
     this.notificationManager = notificationManager ?? null;
+    this.sessionSync = sessionSync ?? null;
+    this.meetingDetection = meetingDetection ?? null;
   }
 
   create(options: WebContentsViewOptions): string {
@@ -35,6 +51,12 @@ export class WcvManager {
         nodeIntegration: false,
       },
     });
+
+    // Register this partition for Google auth cookie sync across panels
+    const resolvedPartition = partition ?? `persist:${id}`;
+    if (this.sessionSync) {
+      this.sessionSync.registerPartition(resolvedPartition);
+    }
 
     // Strip Electron and app name from user-agent so sites serve standard
     // web flows (not FedCM or other unsupported Electron-specific APIs)
@@ -57,11 +79,13 @@ export class WcvManager {
     view.webContents.on('did-navigate', (_event, navigatedUrl) => {
       managed.currentUrl = navigatedUrl;
       this.sendToRenderer('wcv:url-changed', { id, url: navigatedUrl });
+      this.meetingDetection?.checkUrl(id, navigatedUrl);
     });
 
     view.webContents.on('did-navigate-in-page', (_event, navigatedUrl) => {
       managed.currentUrl = navigatedUrl;
       this.sendToRenderer('wcv:url-changed', { id, url: navigatedUrl });
+      this.meetingDetection?.checkUrl(id, navigatedUrl);
     });
 
     view.webContents.on('page-title-updated', (_event, title) => {
@@ -134,30 +158,30 @@ export class WcvManager {
     // Log ALL console messages from embedded pages for debugging
     view.webContents.on('console-message', (_event, level, message, line, sourceId) => {
       const prefix = level === 0 ? 'DEBUG' : level === 1 ? 'INFO' : level === 2 ? 'WARN' : 'ERROR';
-      console.log(`[${id}:${prefix}] ${message} (${sourceId}:${line})`);
+      safeLog(`[${id}:${prefix}] ${message} (${sourceId}:${line})`);
     });
 
     // Log the user agent being used
-    console.log(`[${id}:ua] ${view.webContents.getUserAgent()}`);
+    safeLog(`[${id}:ua] ${view.webContents.getUserAgent()}`);
 
     // Log render process crashes
     view.webContents.on('render-process-gone', (_event, details) => {
-      console.error(`[${id}:crash] Render process gone:`, details.reason, details.exitCode);
+      safeError(`[${id}:crash] Render process gone:`, details.reason, details.exitCode);
     });
 
     // Log detailed load events
     view.webContents.on('did-fail-load', (_event, errorCode, errorDesc, validatedURL) => {
-      console.error(`[${id}:load-fail] ${errorCode} ${errorDesc} at ${validatedURL}`);
+      safeError(`[${id}:load-fail] ${errorCode} ${errorDesc} at ${validatedURL}`);
     });
 
     view.webContents.on('did-finish-load', () => {
-      console.log(`[${id}:loaded] ${view.webContents.getURL()}`);
+      safeLog(`[${id}:loaded] ${view.webContents.getURL()}`);
     });
 
     // Load
-    console.log(`[${id}:loading] ${url}`);
+    safeLog(`[${id}:loading] ${url}`);
     view.webContents.loadURL(url).catch((err) => {
-      console.error(`[WcvManager] Failed to load ${id}:`, err);
+      safeError(`[WcvManager] Failed to load ${id}:`, err);
     });
 
     return id;
@@ -168,7 +192,7 @@ export class WcvManager {
     if (!managed) return;
     managed.currentUrl = url;
     managed.view.webContents.loadURL(url).catch((err) => {
-      console.error(`[WcvManager] Failed to navigate ${id}:`, err);
+      safeError(`[WcvManager] Failed to navigate ${id}:`, err);
     });
   }
 
@@ -179,9 +203,17 @@ export class WcvManager {
   destroy(id: string): void {
     const managed = this.views.get(id);
     if (!managed) return;
-    this.window.contentView.removeChildView(managed.view);
-    managed.view.webContents.close();
     this.views.delete(id);
+    try {
+      if (!this.window.isDestroyed()) {
+        this.window.contentView.removeChildView(managed.view);
+      }
+      if (!managed.view.webContents.isDestroyed()) {
+        managed.view.webContents.close();
+      }
+    } catch {
+      // View may already be destroyed during app shutdown
+    }
   }
 
   getState(id: string): WebContentsViewState | null {

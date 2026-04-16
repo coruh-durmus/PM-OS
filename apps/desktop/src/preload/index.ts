@@ -50,7 +50,7 @@ const api = {
   },
   project: {
     list: () => ipcRenderer.invoke('project:list'),
-    create: (name: string, projectType?: string) => ipcRenderer.invoke('project:create', name, projectType),
+    create: (name: string) => ipcRenderer.invoke('project:create', name),
     delete: (name: string) => ipcRenderer.invoke('project:delete', name),
     getConfig: (path: string) => ipcRenderer.invoke('project:get-config', path),
     getLinks: (path: string) => ipcRenderer.invoke('project:get-links', path),
@@ -118,6 +118,43 @@ const api = {
   settings: {
     getEnabledApps: () => ipcRenderer.invoke('settings:get-enabled-apps'),
     save: (settings: any) => ipcRenderer.invoke('settings:save', settings),
+    isOnboarded: (): Promise<boolean> => ipcRenderer.invoke('settings:isOnboarded'),
+    setOnboarded: (): Promise<void> => ipcRenderer.invoke('settings:setOnboarded'),
+  },
+  meeting: {
+    getActive: () => ipcRenderer.invoke('meeting:get-active'),
+    skipTranscription: () => ipcRenderer.invoke('meeting:skip-transcription'),
+    forceStop: () => ipcRenderer.invoke('meeting:force-stop'),
+    onDetected: (callback: (data: { panelId: string; url: string; platform: string }) => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, data: any) => callback(data);
+      ipcRenderer.on('meeting:detected', listener);
+      return () => ipcRenderer.removeListener('meeting:detected', listener);
+    },
+    onEnded: (callback: (data: { meetingId: string; duration: number }) => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, data: any) => callback(data);
+      ipcRenderer.on('meeting:ended', listener);
+      return () => ipcRenderer.removeListener('meeting:ended', listener);
+    },
+  },
+  audio: {
+    startCapture: () => ipcRenderer.invoke('audio:start-capture'),
+    stopCapture: () => ipcRenderer.invoke('audio:stop-capture'),
+    getStatus: () => ipcRenderer.invoke('audio:get-status'),
+  },
+  extensionStore: {
+    getRegistry: () => ipcRenderer.invoke('extension-store:get-registry'),
+    install: (id: string, options?: any) => ipcRenderer.invoke('extension-store:install', id, options),
+    uninstall: (id: string) => ipcRenderer.invoke('extension-store:uninstall', id),
+    onProgress: (callback: (data: any) => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, data: any) => callback(data);
+      ipcRenderer.on('extension-store:progress', listener);
+      return () => ipcRenderer.removeListener('extension-store:progress', listener);
+    },
+    onComplete: (callback: (data: any) => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, data: any) => callback(data);
+      ipcRenderer.on('extension-store:install-complete', listener);
+      return () => ipcRenderer.removeListener('extension-store:install-complete', listener);
+    },
   },
   dialog: {
     openDirectory(): Promise<string | null> {
