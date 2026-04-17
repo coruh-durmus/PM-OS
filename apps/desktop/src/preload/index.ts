@@ -148,19 +148,61 @@ const api = {
     stopCapture: () => ipcRenderer.invoke('audio:stop-capture'),
     getStatus: () => ipcRenderer.invoke('audio:get-status'),
   },
+  extensions: {
+    getThemes(): Promise<any[]> {
+      return ipcRenderer.invoke('extension:get-themes');
+    },
+    getConfigs(): Promise<any[]> {
+      return ipcRenderer.invoke('extension:get-configs');
+    },
+    onStatusBarUpdate(callback: (data: any) => void): () => void {
+      const listener = (_event: any, data: any) => callback(data);
+      ipcRenderer.on('statusbar:update', listener);
+      return () => ipcRenderer.removeListener('statusbar:update', listener);
+    },
+    onStatusBarRemove(callback: (data: any) => void): () => void {
+      const listener = (_event: any, data: any) => callback(data);
+      ipcRenderer.on('statusbar:remove', listener);
+      return () => ipcRenderer.removeListener('statusbar:remove', listener);
+    },
+    getCommands(): Promise<any[]> {
+      return ipcRenderer.invoke('extension:get-commands');
+    },
+    executeCommand(commandId: string, ...args: any[]): Promise<any> {
+      return ipcRenderer.invoke('extension:execute-command', commandId, ...args);
+    },
+  },
   extensionStore: {
-    getRegistry: () => ipcRenderer.invoke('extension-store:get-registry'),
-    install: (id: string, options?: any) => ipcRenderer.invoke('extension-store:install', id, options),
-    uninstall: (id: string) => ipcRenderer.invoke('extension-store:uninstall', id),
-    onProgress: (callback: (data: any) => void) => {
+    search(query: string, category?: string, offset?: number): Promise<any> {
+      return ipcRenderer.invoke('extension-store:search', query, category, offset);
+    },
+    getExtension(namespace: string, name: string): Promise<any> {
+      return ipcRenderer.invoke('extension-store:get-extension', namespace, name);
+    },
+    install(namespace: string, name: string, version: string): Promise<void> {
+      return ipcRenderer.invoke('extension-store:install', namespace, name, version);
+    },
+    uninstall(id: string): Promise<void> {
+      return ipcRenderer.invoke('extension-store:uninstall', id);
+    },
+    getInstalled(): Promise<any[]> {
+      return ipcRenderer.invoke('extension-store:get-installed');
+    },
+    onProgress(callback: (data: any) => void): () => void {
       const listener = (_event: Electron.IpcRendererEvent, data: any) => callback(data);
       ipcRenderer.on('extension-store:progress', listener);
       return () => ipcRenderer.removeListener('extension-store:progress', listener);
     },
-    onComplete: (callback: (data: any) => void) => {
+    onComplete(callback: (data: any) => void): () => void {
       const listener = (_event: Electron.IpcRendererEvent, data: any) => callback(data);
       ipcRenderer.on('extension-store:install-complete', listener);
       return () => ipcRenderer.removeListener('extension-store:install-complete', listener);
+    },
+    checkUpdates(): Promise<any[]> {
+      return ipcRenderer.invoke('extension-store:check-updates');
+    },
+    update(namespace: string, name: string, version: string): Promise<void> {
+      return ipcRenderer.invoke('extension-store:update', namespace, name, version);
     },
   },
   dialog: {

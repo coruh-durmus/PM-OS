@@ -5,7 +5,7 @@ export interface Command {
   id: string;
   title: string;
   category: string;
-  action: () => void;
+  action: () => void | Promise<void>;
 }
 
 export class CommandPalette {
@@ -39,9 +39,10 @@ export class CommandPalette {
     }
   }
 
-  show(): void {
+  async show(): Promise<void> {
     this.el.classList.remove('hidden');
     this.inputEl.value = '';
+    await this.loadExtensionCommands();
     this.filter('');
     this.inputEl.focus();
   }
@@ -49,6 +50,26 @@ export class CommandPalette {
   hide(): void {
     this.el.classList.add('hidden');
     this.inputEl.value = '';
+  }
+
+  private async loadExtensionCommands(): Promise<void> {
+    try {
+      const extCommands: { id: string; title: string; category?: string }[] =
+        await (window as any).pmOs.extensions?.getCommands?.() ?? [];
+      for (const cmd of extCommands) {
+        if (!this.commands.find(c => c.id === cmd.id)) {
+          this.commands.push({
+            id: cmd.id,
+            title: cmd.title,
+            category: cmd.category || 'Extension',
+            action: async () => {
+              // Execute via IPC to main process
+              await (window as any).pmOs.extensions?.executeCommand?.(cmd.id);
+            },
+          });
+        }
+      }
+    } catch {}
   }
 
   private setupCommands(): void {

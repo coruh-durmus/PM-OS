@@ -1,188 +1,297 @@
 import { app } from 'electron';
-import * as fs from 'fs';
-import * as path from 'path';
-import type {
-  ExtensionRegistry,
-  ExtensionRegistryEntry,
-  ExtensionInstallProgress,
-  InstalledExtensionState,
-} from '@pm-os/types';
+import path from 'node:path';
+import fs from 'node:fs';
+import https from 'node:https';
+import http from 'node:http';
 
-function safeLog(...args: unknown[]): void {
-  try { console.log(...args); } catch {}
+const OPEN_VSX_API = 'https://open-vsx.org/api';
+const EXTENSIONS_DIR = path.join(app.getPath('userData'), 'extensions');
+const INSTALLED_FILE = path.join(app.getPath('userData'), 'installed-extensions.json');
+
+interface SearchResult {
+  offset: number;
+  totalSize: number;
+  extensions: ExtensionInfo[];
 }
-function safeError(...args: unknown[]): void {
-  try { console.error(...args); } catch {}
+
+interface ExtensionInfo {
+  name: string;
+  namespace: string;
+  displayName: string;
+  description: string;
+  version: string;
+  iconUrl: string | null;
+  downloadCount: number;
+  averageRating: number | null;
+  downloadUrl: string | null;
+  categories: string[];
 }
+
+interface InstalledExtension {
+  id: string;
+  name: string;
+  namespace: string;
+  displayName: string;
+  description: string;
+  version: string;
+  installedAt: string;
+  extensionPath: string;
+}
+
+function safeLog(...args: unknown[]): void { try { console.log(...args); } catch {} }
+function safeError(...args: unknown[]): void { try { console.error(...args); } catch {} }
 
 export class ExtensionStoreManager {
-  private stateFilePath: string;
-  private installedState: Map<string, InstalledExtensionState> = new Map();
-  private window: Electron.BrowserWindow | null = null;
+  private progressCallback?: (data: any) => void;
 
-  constructor() {
-    this.stateFilePath = path.join(app.getPath('userData'), 'extension-store.json');
-    this.loadState();
+  setProgressCallback(cb: (data: any) => void): void {
+    this.progressCallback = cb;
   }
 
-  setWindow(win: Electron.BrowserWindow): void {
-    this.window = win;
+  async search(query: string, category?: string, offset: number = 0, size: number = 20): Promise<SearchResult> {
+    const params = new URLSearchParams();
+    if (query) params.set('query', query);
+    if (category && category !== 'All') params.set('category', category);
+    params.set('size', String(size));
+    params.set('offset', String(offset));
+    params.set('sortBy', 'relevance');
+    params.set('sortOrder', 'desc');
+
+    const url = `${OPEN_VSX_API}/-/search?${params.toString()}`;
+    const data = await this.fetchJson(url);
+
+    return {
+      offset: data.offset || 0,
+      totalSize: data.totalSize || 0,
+      extensions: (data.extensions || []).map((ext: any) => this.mapExtension(ext)),
+    };
   }
 
-  getRegistry(): { extensions: (ExtensionRegistryEntry & { installed: boolean; installedVersion?: string })[] } {
-    const registry = this.readRegistry();
-    const extensions = registry.extensions.map((ext) => {
-      const state = this.installedState.get(ext.id);
-      return {
-        ...ext,
-        installed: !!state,
-        installedVersion: state?.version,
-      };
+  async getExtension(namespace: string, name: string): Promise<ExtensionInfo | null> {
+    try {
+      const data = await this.fetchJson(`${OPEN_VSX_API}/${namespace}/${name}`);
+      return this.mapExtension(data);
+    } catch {
+      return null;
+    }
+  }
+
+  async install(namespace: string, name: string, version: string): Promise<void> {
+    const id = `${namespace}.${name}`;
+    const debugLog = (msg: string) => {
+      safeLog(msg);
+      try { fs.appendFileSync('/tmp/pmos-install-debug.log', msg + '\n'); } catch {}
+    };
+    debugLog(`[store] === INSTALL START === ${new Date().toISOString()}`);
+    debugLog(`[store] Installing ${id}@${version}`);
+    debugLog(`[store] EXTENSIONS_DIR=${EXTENSIONS_DIR}`);
+    debugLog(`[store] namespace=${namespace}, name=${name}, version=${version}`);
+
+    // Ensure extensions directory exists
+    if (!fs.existsSync(EXTENSIONS_DIR)) {
+      fs.mkdirSync(EXTENSIONS_DIR, { recursive: true });
+    }
+
+    const extDir = path.join(EXTENSIONS_DIR, id);
+    const vsixPath = path.join(EXTENSIONS_DIR, `${id}.vsix`);
+
+    try {
+      // 1. Get download URL
+      this.sendProgress({ id, stage: 'downloading', percent: 0 });
+      const detailUrl = `${OPEN_VSX_API}/${namespace}/${name}/${version}`;
+      debugLog(`[store] Fetching details from: ${detailUrl}`);
+      const details = await this.fetchJson(detailUrl);
+      const downloadUrl = details.files?.download;
+      debugLog(`[store] Download URL: ${downloadUrl || 'NONE'}`);
+      if (!downloadUrl) throw new Error('No download URL found');
+
+      // 2. Download VSIX
+      await this.downloadFile(downloadUrl, vsixPath, (percent) => {
+        this.sendProgress({ id, stage: 'downloading', percent });
+      });
+
+      // 3. Extract VSIX (ZIP format)
+      this.sendProgress({ id, stage: 'extracting', percent: 75 });
+      const vsixStat = fs.statSync(vsixPath);
+      debugLog(`[store] VSIX downloaded: ${vsixPath} (${vsixStat.size} bytes)`);
+      await this.extractVsix(vsixPath, extDir);
+      debugLog(`[store] VSIX extracted to: ${extDir}`);
+
+      // 4. Clean up VSIX file
+      try { fs.unlinkSync(vsixPath); } catch {}
+
+      // 5. Register as installed
+      this.sendProgress({ id, stage: 'registering', percent: 90 });
+      const installed = this.getInstalled();
+      const manifest = this.readManifest(extDir);
+      installed.push({
+        id,
+        name,
+        namespace,
+        displayName: manifest?.displayName || name,
+        description: manifest?.description || '',
+        version,
+        installedAt: new Date().toISOString(),
+        extensionPath: extDir,
+      });
+      fs.writeFileSync(INSTALLED_FILE, JSON.stringify(installed, null, 2));
+
+      this.sendProgress({ id, stage: 'complete', percent: 100 });
+      safeLog(`[store] Installed ${id}@${version} to ${extDir}`);
+    } catch (err) {
+      debugLog(`[store] === INSTALL FAILED for ${id} ===`);
+      debugLog(`[store] Error: ${err instanceof Error ? err.stack : String(err)}`);
+      safeError(`[store] Install failed for ${id}:`, err);
+      // Cleanup on failure
+      try { fs.rmSync(extDir, { recursive: true, force: true }); } catch {}
+      try { fs.unlinkSync(vsixPath); } catch {}
+      this.sendProgress({ id, stage: 'error', percent: 0, error: String(err) });
+      throw err;
+    }
+  }
+
+  async uninstall(id: string): Promise<void> {
+    safeLog(`[store] Uninstalling ${id}`);
+    const extDir = path.join(EXTENSIONS_DIR, id);
+    try { fs.rmSync(extDir, { recursive: true, force: true }); } catch {}
+
+    const installed = this.getInstalled().filter(e => e.id !== id);
+    fs.writeFileSync(INSTALLED_FILE, JSON.stringify(installed, null, 2));
+    safeLog(`[store] Uninstalled ${id}`);
+  }
+
+  getInstalled(): InstalledExtension[] {
+    try {
+      if (fs.existsSync(INSTALLED_FILE)) {
+        return JSON.parse(fs.readFileSync(INSTALLED_FILE, 'utf-8'));
+      }
+    } catch {}
+    return [];
+  }
+
+  getInstalledPaths(): string[] {
+    return this.getInstalled().map(e => e.extensionPath).filter(p => fs.existsSync(p));
+  }
+
+  async checkUpdates(): Promise<{ id: string; currentVersion: string; latestVersion: string; displayName: string }[]> {
+    const installed = this.getInstalled();
+    const updates: { id: string; currentVersion: string; latestVersion: string; displayName: string }[] = [];
+
+    for (const ext of installed) {
+      try {
+        const latest = await this.fetchJson(`${OPEN_VSX_API}/${ext.namespace}/${ext.name}`);
+        const latestVersion = latest.version || latest.latestVersion;
+        if (latestVersion && latestVersion !== ext.version) {
+          updates.push({
+            id: ext.id,
+            currentVersion: ext.version,
+            latestVersion,
+            displayName: ext.displayName || ext.name,
+          });
+        }
+      } catch {}
+    }
+
+    return updates;
+  }
+
+  async updateExtension(namespace: string, name: string, version: string): Promise<void> {
+    const id = `${namespace}.${name}`;
+    await this.uninstall(id);
+    await this.install(namespace, name, version);
+  }
+
+  private mapExtension(data: any): ExtensionInfo {
+    return {
+      name: data.name || '',
+      namespace: data.namespace?.name || data.namespace || '',
+      displayName: data.displayName || data.name || '',
+      description: data.description || '',
+      version: data.version || data.latestVersion || '',
+      iconUrl: data.files?.icon || data.iconUrl || null,
+      downloadCount: data.downloadCount || 0,
+      averageRating: data.averageRating ?? null,
+      downloadUrl: data.files?.download || null,
+      categories: data.categories || [],
+    };
+  }
+
+  private readManifest(extDir: string): any {
+    // VSIX extracts with an 'extension/' subdirectory
+    const paths = [
+      path.join(extDir, 'extension', 'package.json'),
+      path.join(extDir, 'package.json'),
+    ];
+    for (const p of paths) {
+      try {
+        if (fs.existsSync(p)) return JSON.parse(fs.readFileSync(p, 'utf-8'));
+      } catch {}
+    }
+    return null;
+  }
+
+  private async extractVsix(vsixPath: string, targetDir: string): Promise<void> {
+    const { execSync } = require('child_process');
+    if (fs.existsSync(targetDir)) fs.rmSync(targetDir, { recursive: true, force: true });
+    fs.mkdirSync(targetDir, { recursive: true });
+    // VSIX is a ZIP file — use unzip
+    execSync(`unzip -o -q "${vsixPath}" -d "${targetDir}"`, { stdio: 'pipe' });
+  }
+
+  private sendProgress(data: any): void {
+    this.progressCallback?.(data);
+  }
+
+  private fetchJson(url: string): Promise<any> {
+    return new Promise((resolve, reject) => {
+      const client = url.startsWith('https') ? https : http;
+      client.get(url, { headers: { 'Accept': 'application/json' } }, (res) => {
+        if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+          res.resume();
+          this.fetchJson(res.headers.location).then(resolve).catch(reject);
+          return;
+        }
+        let body = '';
+        res.on('data', (chunk) => { body += chunk; });
+        res.on('end', () => {
+          try { resolve(JSON.parse(body)); }
+          catch (e) { reject(new Error(`Failed to parse response from ${url}`)); }
+        });
+        res.on('error', reject);
+      }).on('error', reject);
     });
-    return { extensions };
   }
 
-  async installExtension(id: string, options?: { whisperModel?: string }): Promise<void> {
-    const registry = this.readRegistry();
-    const entry = registry.extensions.find((e) => e.id === id);
-    if (!entry) {
-      this.sendProgress({ extensionId: id, phase: 'error', error: `Extension "${id}" not found in registry` });
-      return;
-    }
-
-    // Send downloading phase
-    this.sendProgress({ extensionId: id, phase: 'downloading', percent: 0, currentItem: entry.name });
-
-    const extensionsDir = path.join(app.getPath('userData'), 'extensions');
-    const extDir = path.join(extensionsDir, id.replace(/\//g, '__'));
-
-    try {
-      // Create extension directory structure
-      fs.mkdirSync(extDir, { recursive: true });
-
-      // Simulate download progress
-      this.sendProgress({ extensionId: id, phase: 'downloading', percent: 50, currentItem: entry.name });
-
-      // Write a manifest for the installed extension
-      const manifest = {
-        id: entry.id,
-        name: entry.name,
-        version: entry.version,
-        description: entry.description,
-        author: entry.author,
-        installedAt: new Date().toISOString(),
-      };
-      fs.writeFileSync(path.join(extDir, 'manifest.json'), JSON.stringify(manifest, null, 2), 'utf-8');
-
-      this.sendProgress({ extensionId: id, phase: 'extracting', percent: 75, currentItem: entry.name });
-
-      // Handle variant selection (e.g., whisper model size)
-      const selectedVariants: Record<string, string> = {};
-      if (options?.whisperModel && entry.dependencies) {
-        const whisperDep = entry.dependencies.find((d) => d.variants && d.variants.length > 0);
-        if (whisperDep) {
-          selectedVariants[whisperDep.id] = options.whisperModel;
+  private downloadFile(url: string, dest: string, onProgress?: (percent: number) => void): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const client = url.startsWith('https') ? https : http;
+      client.get(url, (res) => {
+        if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+          res.resume();
+          this.downloadFile(res.headers.location, dest, onProgress).then(resolve).catch(reject);
+          return;
         }
-      }
-
-      this.sendProgress({ extensionId: id, phase: 'installing-deps', percent: 90, currentItem: 'dependencies' });
-
-      // Update installed state
-      const state: InstalledExtensionState = {
-        id: entry.id,
-        version: entry.version,
-        installedAt: new Date().toISOString(),
-        selectedVariants: Object.keys(selectedVariants).length > 0 ? selectedVariants : undefined,
-      };
-      this.installedState.set(id, state);
-      this.saveState();
-
-      safeLog(`[extension-store] Installed ${id} v${entry.version}`);
-
-      // Send complete
-      this.sendProgress({ extensionId: id, phase: 'complete', percent: 100 });
-      this.sendComplete({ extensionId: id, action: 'install' });
-    } catch (err: any) {
-      safeError(`[extension-store] Install failed for ${id}:`, err);
-      this.sendProgress({ extensionId: id, phase: 'error', error: err.message });
-    }
-  }
-
-  async uninstallExtension(id: string): Promise<void> {
-    const extensionsDir = path.join(app.getPath('userData'), 'extensions');
-    const extDir = path.join(extensionsDir, id.replace(/\//g, '__'));
-
-    try {
-      // Remove extension directory
-      if (fs.existsSync(extDir)) {
-        fs.rmSync(extDir, { recursive: true, force: true });
-      }
-
-      // Update installed state
-      this.installedState.delete(id);
-      this.saveState();
-
-      safeLog(`[extension-store] Uninstalled ${id}`);
-
-      this.sendComplete({ extensionId: id, action: 'uninstall' });
-    } catch (err: any) {
-      safeError(`[extension-store] Uninstall failed for ${id}:`, err);
-    }
-  }
-
-  private readRegistry(): ExtensionRegistry {
-    try {
-      const registryPath = path.join(__dirname, '..', '..', 'src', 'main', 'extension-registry.json');
-      // Try the dev path first, then the bundled path
-      let rawPath = registryPath;
-      if (!fs.existsSync(rawPath)) {
-        rawPath = path.join(__dirname, 'extension-registry.json');
-      }
-      if (!fs.existsSync(rawPath)) {
-        // Fallback: look relative to the app
-        rawPath = path.join(app.getAppPath(), 'apps', 'desktop', 'src', 'main', 'extension-registry.json');
-      }
-      const raw = fs.readFileSync(rawPath, 'utf-8');
-      return JSON.parse(raw);
-    } catch (err) {
-      safeError('[extension-store] Failed to read registry:', err);
-      return { version: 1, extensions: [] };
-    }
-  }
-
-  private loadState(): void {
-    try {
-      if (fs.existsSync(this.stateFilePath)) {
-        const raw = fs.readFileSync(this.stateFilePath, 'utf-8');
-        const data = JSON.parse(raw) as InstalledExtensionState[];
-        for (const entry of data) {
-          this.installedState.set(entry.id, entry);
+        if (res.statusCode !== 200) {
+          res.resume();
+          reject(new Error(`HTTP ${res.statusCode} downloading ${url}`));
+          return;
         }
-        safeLog(`[extension-store] Loaded ${this.installedState.size} installed extension(s)`);
-      }
-    } catch (err) {
-      safeError('[extension-store] Failed to load state:', err);
-    }
-  }
+        const totalBytes = parseInt(res.headers['content-length'] || '0', 10);
+        let receivedBytes = 0;
+        const file = fs.createWriteStream(dest);
 
-  private saveState(): void {
-    try {
-      const data = Array.from(this.installedState.values());
-      fs.writeFileSync(this.stateFilePath, JSON.stringify(data, null, 2), 'utf-8');
-    } catch (err) {
-      safeError('[extension-store] Failed to save state:', err);
-    }
-  }
+        if (onProgress && totalBytes > 0) {
+          res.on('data', (chunk) => {
+            receivedBytes += chunk.length;
+            onProgress(Math.round((receivedBytes / totalBytes) * 70));
+          });
+        }
 
-  private sendProgress(progress: ExtensionInstallProgress): void {
-    try {
-      this.window?.webContents.send('extension-store:progress', progress);
-    } catch {}
-  }
-
-  private sendComplete(data: { extensionId: string; action: string }): void {
-    try {
-      this.window?.webContents.send('extension-store:install-complete', data);
-    } catch {}
+        // Use pipe for proper backpressure handling — prevents truncated files
+        res.pipe(file);
+        file.on('finish', () => { file.close(); resolve(); });
+        file.on('error', (err) => { file.close(); reject(err); });
+      }).on('error', reject);
+    });
   }
 }

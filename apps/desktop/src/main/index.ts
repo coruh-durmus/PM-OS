@@ -35,6 +35,7 @@ import { createAppMenu } from './app-menu.js';
 import { MeetingDetectionService } from './meeting-detection.js';
 import { AudioCaptureManager } from './audio-capture-manager.js';
 import { ExtensionStoreManager } from './extension-store-manager.js';
+import { setMainWebContents } from './vscode-shim/window.js';
 
 // ---------------------------------------------------------------------------
 // Safe logging helpers — guard every write against EPIPE so that a broken pipe
@@ -66,9 +67,14 @@ app.whenReady().then(async () => {
   const workspaceManager = new WorkspaceManager();
   workspaceManager.setWindow(mainWindow);
   const extensionStoreManager = new ExtensionStoreManager();
-  extensionStoreManager.setWindow(mainWindow);
+  extensionStoreManager.setProgressCallback((data) => {
+    try { mainWindow.webContents.send('extension-store:progress', data); } catch {}
+  });
   createAppMenu(workspaceManager);
   registerIpcHandlers(mainWindow, wcvManager, extensionHost, ptyManager, notificationManager, workspaceManager, meetingDetection, audioCaptureManager, extensionStoreManager);
+
+  // Wire up vscode-shim status bar IPC to the main window
+  setMainWebContents(mainWindow.webContents);
 
   // Let meeting detection check workspace state directly
   meetingDetection.setWorkspaceChecker(workspaceManager);

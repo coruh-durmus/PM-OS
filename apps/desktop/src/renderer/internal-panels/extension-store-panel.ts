@@ -1,297 +1,485 @@
 export class ExtensionStorePanel {
   private el: HTMLElement;
-  private disposeProgress: (() => void) | null = null;
-  private disposeComplete: (() => void) | null = null;
+  private resultsEl: HTMLElement | null = null;
+  private searchInput: HTMLInputElement | null = null;
+  private activeTab: 'marketplace' | 'installed' = 'marketplace';
+  private searchOffset: number = 0;
+  private searching = false;
+  private installedExtensions: any[] = [];
 
   constructor(container: HTMLElement) {
     this.el = container;
   }
 
   async render(): Promise<void> {
-    while (this.el.firstChild) this.el.removeChild(this.el.firstChild);
+    this.el.textContent = '';
+    this.el.style.cssText = 'height: 100%; display: flex; flex-direction: column; overflow: hidden;';
 
-    // Clean up previous listeners
-    this.disposeProgress?.();
-    this.disposeComplete?.();
+    // Search bar
+    const searchWrap = document.createElement('div');
+    searchWrap.style.cssText = 'padding: 8px 8px 0; flex-shrink: 0;';
 
-    const root = document.createElement('div');
-    root.className = 'extension-store';
-    this.el.appendChild(root);
+    this.searchInput = document.createElement('input');
+    this.searchInput.type = 'text';
+    this.searchInput.placeholder = 'Search Extensions in Marketplace';
+    this.searchInput.style.cssText = 'width: 100%; padding: 4px 8px; background: var(--bg-primary); border: 1px solid var(--border); border-radius: 2px; color: var(--text-primary); font-size: 12px; outline: none; font-family: inherit; box-sizing: border-box;';
+    this.searchInput.addEventListener('focus', () => { this.searchInput!.style.borderColor = 'var(--accent)'; });
+    this.searchInput.addEventListener('blur', () => { this.searchInput!.style.borderColor = 'var(--border)'; });
 
-    // Header
-    const header = document.createElement('div');
-    header.className = 'extension-store-header';
-    const title = document.createElement('span');
-    title.textContent = 'EXTENSIONS';
-    header.appendChild(title);
+    let debounceTimer: ReturnType<typeof setTimeout>;
+    this.searchInput.addEventListener('input', () => {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => { this.searchOffset = 0; this.performSearch(); }, 300);
+    });
+    this.searchInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { clearTimeout(debounceTimer); this.searchOffset = 0; this.performSearch(); }
+    });
+    searchWrap.appendChild(this.searchInput);
+    this.el.appendChild(searchWrap);
 
-    const refreshBtn = document.createElement('button');
-    refreshBtn.textContent = '\u21BB';
-    refreshBtn.title = 'Refresh';
-    refreshBtn.style.cssText = 'width: 22px; height: 22px; background: none; border: none; color: var(--text-muted); cursor: pointer; border-radius: var(--radius-sm); font-size: 16px; display: flex; align-items: center; justify-content: center;';
-    refreshBtn.addEventListener('mouseenter', () => refreshBtn.style.color = 'var(--text-primary)');
-    refreshBtn.addEventListener('mouseleave', () => refreshBtn.style.color = 'var(--text-muted)');
-    refreshBtn.addEventListener('click', () => this.render());
-    header.appendChild(refreshBtn);
-    root.appendChild(header);
+    // Tabs
+    const tabBar = document.createElement('div');
+    tabBar.style.cssText = 'display: flex; padding: 0 8px; flex-shrink: 0; margin-top: 4px;';
 
-    // List
-    const list = document.createElement('div');
-    list.className = 'extension-store-list';
-    root.appendChild(list);
+    try { this.installedExtensions = await (window as any).pmOs.extensionStore.getInstalled(); } catch { this.installedExtensions = []; }
 
-    // Fetch registry
+    const mkTab = (label: string, id: 'marketplace' | 'installed') => {
+      const tab = document.createElement('button');
+      tab.textContent = label;
+      const isActive = id === this.activeTab;
+      tab.style.cssText = `padding: 6px 12px; border: none; background: none; font-size: 11px; font-weight: 500; cursor: pointer; font-family: inherit; border-bottom: 2px solid ${isActive ? 'var(--accent)' : 'transparent'}; color: ${isActive ? 'var(--text-primary)' : 'var(--text-muted)'}; transition: color 100ms;`;
+      tab.addEventListener('click', () => { this.activeTab = id; this.render(); });
+      return tab;
+    };
+
+    tabBar.appendChild(mkTab('Marketplace', 'marketplace'));
+    tabBar.appendChild(mkTab(`Installed (${this.installedExtensions.length})`, 'installed'));
+    this.el.appendChild(tabBar);
+
+    const sep = document.createElement('div');
+    sep.style.cssText = 'height: 1px; background: var(--border); flex-shrink: 0;';
+    this.el.appendChild(sep);
+
+    // Results
+    this.resultsEl = document.createElement('div');
+    this.resultsEl.style.cssText = 'flex: 1; overflow-y: auto;';
+    this.el.appendChild(this.resultsEl);
+
+    if (this.activeTab === 'marketplace') {
+      this.performSearch();
+    } else {
+      this.showInstalled();
+    }
+
+    requestAnimationFrame(() => this.searchInput?.focus());
+  }
+
+  private async performSearch(): Promise<void> {
+    if (!this.resultsEl || this.searching) return;
+    this.searching = true;
+
+    const query = this.searchInput?.value || '';
+    this.resultsEl.textContent = '';
+
+    const loading = document.createElement('div');
+    loading.style.cssText = 'padding: 16px; text-align: center; color: var(--text-muted); font-size: 12px;';
+    loading.textContent = 'Searching...';
+    this.resultsEl.appendChild(loading);
+
     try {
-      const registry = await (window as any).pmOs.extensionStore.getRegistry();
-      if (!registry?.extensions?.length) {
+      const result = await (window as any).pmOs.extensionStore.search(query, undefined, this.searchOffset);
+      this.resultsEl.textContent = '';
+
+      if (!result.extensions || result.extensions.length === 0) {
         const empty = document.createElement('div');
-        empty.style.cssText = 'padding: 24px; text-align: center; color: var(--text-muted); font-size: 12px;';
-        empty.textContent = 'No extensions available';
-        list.appendChild(empty);
+        empty.style.cssText = 'padding: 24px 16px; text-align: center; color: var(--text-muted); font-size: 12px;';
+        empty.textContent = query ? `No results for "${query}"` : 'No extensions found';
+        this.resultsEl.appendChild(empty);
+        this.searching = false;
         return;
       }
 
-      for (const ext of registry.extensions) {
-        list.appendChild(this.buildCard(ext));
+      for (const ext of result.extensions) {
+        this.renderExtensionRow(ext, this.resultsEl);
+      }
+
+      if (result.extensions.length >= 20 && this.searchOffset + 20 < result.totalSize) {
+        const loadMore = document.createElement('div');
+        loadMore.style.cssText = 'padding: 8px 16px; text-align: center;';
+        const btn = document.createElement('button');
+        btn.textContent = 'Show More';
+        btn.style.cssText = 'padding: 4px 16px; background: none; border: 1px solid var(--border); border-radius: 2px; color: var(--text-muted); cursor: pointer; font-size: 11px; font-family: inherit;';
+        btn.addEventListener('click', () => { this.searchOffset += 20; this.performSearch(); });
+        loadMore.appendChild(btn);
+        this.resultsEl.appendChild(loadMore);
       }
     } catch {
-      const errEl = document.createElement('div');
-      errEl.style.cssText = 'padding: 24px; text-align: center; color: var(--error); font-size: 12px;';
-      errEl.textContent = 'Failed to load extensions';
-      list.appendChild(errEl);
+      this.resultsEl.textContent = '';
+      const err = document.createElement('div');
+      err.style.cssText = 'padding: 16px; text-align: center; color: var(--error); font-size: 12px;';
+      err.textContent = 'Failed to connect to Open VSX. Check internet.';
+      this.resultsEl.appendChild(err);
+    }
+
+    this.searching = false;
+  }
+
+  private renderExtensionRow(ext: any, container: HTMLElement): void {
+    const isInstalled = this.installedExtensions.some(e => e.id === `${ext.namespace}.${ext.name}`);
+
+    const row = document.createElement('div');
+    row.style.cssText = 'display: flex; padding: 8px 10px; gap: 10px; cursor: pointer; transition: background 80ms;';
+    row.addEventListener('mouseenter', () => { row.style.background = 'var(--bg-hover)'; });
+    row.addEventListener('mouseleave', () => { row.style.background = ''; });
+    row.addEventListener('click', () => this.showDetail(ext));
+
+    // Icon
+    const icon = document.createElement('div');
+    icon.style.cssText = 'width: 42px; height: 42px; border-radius: 4px; background: var(--bg-surface); flex-shrink: 0; overflow: hidden; display: flex; align-items: center; justify-content: center;';
+    if (ext.iconUrl) {
+      const img = document.createElement('img');
+      img.src = ext.iconUrl;
+      img.style.cssText = 'width: 100%; height: 100%; object-fit: cover;';
+      img.onerror = () => { img.remove(); icon.innerHTML = '<span class="codicon codicon-extensions" style="font-size: 20px; color: var(--text-muted);"></span>'; };
+      icon.appendChild(img);
+    } else {
+      icon.innerHTML = '<span class="codicon codicon-extensions" style="font-size: 20px; color: var(--text-muted);"></span>';
+    }
+    row.appendChild(icon);
+
+    // Info
+    const info = document.createElement('div');
+    info.style.cssText = 'flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 1px;';
+
+    // Row 1: Name + Install
+    const row1 = document.createElement('div');
+    row1.style.cssText = 'display: flex; align-items: center; gap: 6px;';
+
+    const nameEl = document.createElement('span');
+    nameEl.style.cssText = 'font-size: 13px; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0;';
+    nameEl.textContent = ext.displayName || ext.name;
+    row1.appendChild(nameEl);
+
+    const btn = document.createElement('button');
+    if (isInstalled) {
+      btn.textContent = 'Installed';
+      btn.style.cssText = 'padding: 1px 8px; font-size: 10px; background: none; border: 1px solid var(--border); border-radius: 2px; color: var(--success); cursor: default; font-family: inherit; flex-shrink: 0;';
+    } else {
+      btn.textContent = 'Install';
+      btn.style.cssText = 'padding: 1px 8px; font-size: 10px; background: var(--accent); border: none; border-radius: 2px; color: var(--bg-primary); cursor: pointer; font-weight: 600; font-family: inherit; flex-shrink: 0;';
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        btn.textContent = '...';
+        btn.style.opacity = '0.6';
+        btn.disabled = true;
+        try {
+          await (window as any).pmOs.extensionStore.install(ext.namespace, ext.name, ext.version);
+          btn.textContent = 'Installed';
+          btn.style.background = 'none';
+          btn.style.border = '1px solid var(--border)';
+          btn.style.color = 'var(--success)';
+        } catch {
+          btn.textContent = 'Failed';
+          btn.style.background = 'var(--error)';
+          setTimeout(() => { btn.textContent = 'Install'; btn.style.background = 'var(--accent)'; btn.style.opacity = '1'; btn.disabled = false; }, 2000);
+        }
+      });
+    }
+    row1.appendChild(btn);
+    info.appendChild(row1);
+
+    // Row 2: Publisher · downloads · rating
+    const row2 = document.createElement('div');
+    row2.style.cssText = 'font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;';
+    let meta = ext.namespace || '';
+    if (ext.downloadCount > 0) meta += ` \u00B7 ${this.formatCount(ext.downloadCount)}`;
+    if (ext.averageRating > 0) meta += ` \u00B7 \u2605 ${ext.averageRating.toFixed(1)}`;
+    row2.textContent = meta;
+    info.appendChild(row2);
+
+    // Row 3: Description
+    if (ext.description) {
+      const row3 = document.createElement('div');
+      row3.style.cssText = 'font-size: 11px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;';
+      row3.textContent = ext.description;
+      info.appendChild(row3);
+    }
+
+    row.appendChild(info);
+    container.appendChild(row);
+  }
+
+  private async showInstalled(): Promise<void> {
+    if (!this.resultsEl) return;
+    this.resultsEl.textContent = '';
+
+    if (this.installedExtensions.length === 0) {
+      const empty = document.createElement('div');
+      empty.style.cssText = 'padding: 24px 16px; text-align: center; color: var(--text-muted); font-size: 12px;';
+      empty.textContent = 'No extensions installed yet.';
+      this.resultsEl.appendChild(empty);
+      return;
+    }
+
+    // Check for updates
+    let updates: any[] = [];
+    try {
+      updates = await (window as any).pmOs.extensionStore.checkUpdates();
+    } catch {}
+
+    for (const ext of this.installedExtensions) {
+      const row = document.createElement('div');
+      row.style.cssText = 'display: flex; padding: 8px 10px; gap: 10px; transition: background 80ms;';
+      row.addEventListener('mouseenter', () => { row.style.background = 'var(--bg-hover)'; });
+      row.addEventListener('mouseleave', () => { row.style.background = ''; });
+
+      const icon = document.createElement('div');
+      icon.style.cssText = 'width: 42px; height: 42px; border-radius: 4px; background: var(--bg-surface); flex-shrink: 0; display: flex; align-items: center; justify-content: center;';
+      icon.innerHTML = '<span class="codicon codicon-extensions" style="font-size: 20px; color: var(--text-muted);"></span>';
+      row.appendChild(icon);
+
+      const info = document.createElement('div');
+      info.style.cssText = 'flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 1px;';
+
+      const row1 = document.createElement('div');
+      row1.style.cssText = 'display: flex; align-items: center; gap: 6px;';
+      const nameEl = document.createElement('span');
+      nameEl.style.cssText = 'font-size: 13px; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1;';
+      nameEl.textContent = ext.displayName || ext.name;
+      row1.appendChild(nameEl);
+
+      const update = updates.find((u: any) => u.id === ext.id);
+      if (update) {
+        const updateBtn = document.createElement('button');
+        updateBtn.textContent = `Update to v${update.latestVersion}`;
+        updateBtn.style.cssText = 'padding: 1px 8px; font-size: 10px; background: var(--accent); border: none; border-radius: 2px; color: var(--bg-primary); cursor: pointer; font-weight: 600; font-family: inherit; flex-shrink: 0; margin-right: 4px;';
+        updateBtn.addEventListener('click', async () => {
+          updateBtn.textContent = 'Updating...';
+          updateBtn.disabled = true;
+          try {
+            await (window as any).pmOs.extensionStore.update(ext.namespace, ext.name, update.latestVersion);
+            updateBtn.textContent = 'Updated!';
+            updateBtn.style.background = 'var(--success)';
+          } catch {
+            updateBtn.textContent = 'Failed';
+            updateBtn.style.background = 'var(--error)';
+          }
+        });
+        row1.appendChild(updateBtn);
+      }
+
+      const unBtn = document.createElement('button');
+      unBtn.textContent = 'Uninstall';
+      unBtn.style.cssText = 'padding: 1px 8px; font-size: 10px; background: none; border: 1px solid var(--border); border-radius: 2px; color: var(--text-muted); cursor: pointer; font-family: inherit; flex-shrink: 0;';
+      unBtn.addEventListener('mouseenter', () => { unBtn.style.color = 'var(--error)'; unBtn.style.borderColor = 'var(--error)'; });
+      unBtn.addEventListener('mouseleave', () => { unBtn.style.color = 'var(--text-muted)'; unBtn.style.borderColor = 'var(--border)'; });
+      unBtn.addEventListener('click', async () => {
+        unBtn.textContent = '...';
+        try {
+          await (window as any).pmOs.extensionStore.uninstall(ext.id);
+          row.remove();
+          this.installedExtensions = this.installedExtensions.filter(e => e.id !== ext.id);
+        } catch { unBtn.textContent = 'Error'; }
+      });
+      row1.appendChild(unBtn);
+      info.appendChild(row1);
+
+      const row2 = document.createElement('div');
+      row2.style.cssText = 'font-size: 11px; color: var(--text-muted);';
+      row2.textContent = `${ext.namespace} \u00B7 v${ext.version}`;
+      info.appendChild(row2);
+
+      if (ext.description) {
+        const row3 = document.createElement('div');
+        row3.style.cssText = 'font-size: 11px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;';
+        row3.textContent = ext.description;
+        info.appendChild(row3);
+      }
+
+      row.appendChild(info);
+      this.resultsEl.appendChild(row);
     }
   }
 
-  private buildCard(ext: any): HTMLElement {
-    const card = document.createElement('div');
-    card.className = 'extension-card';
-    card.dataset.extId = ext.id;
+  private formatCount(n: number): string {
+    if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+    if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+    return String(n);
+  }
 
-    // Header row: icon + info
-    const headerRow = document.createElement('div');
-    headerRow.className = 'extension-card-header';
+  private async showDetail(ext: any): Promise<void> {
+    this.el.textContent = '';
+    this.el.style.cssText = 'height: 100%; display: flex; flex-direction: column; overflow: hidden;';
 
-    const icon = document.createElement('div');
-    icon.className = 'extension-card-icon';
-    icon.appendChild(this.createExtensionIcon(ext.icon));
-    headerRow.appendChild(icon);
+    const isInstalled = this.installedExtensions.some(e => e.id === `${ext.namespace}.${ext.name}`);
 
-    const info = document.createElement('div');
-    info.className = 'extension-card-info';
+    // Back button header
+    const header = document.createElement('div');
+    header.style.cssText = 'padding: 8px; flex-shrink: 0; border-bottom: 1px solid var(--border);';
 
-    const name = document.createElement('div');
-    name.className = 'extension-card-name';
-    name.textContent = ext.name;
-    info.appendChild(name);
+    const backBtn = document.createElement('button');
+    backBtn.style.cssText = 'display: flex; align-items: center; gap: 4px; padding: 4px 8px; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 12px; font-family: inherit; border-radius: 2px; transition: all 100ms;';
+    backBtn.innerHTML = '<span class="codicon codicon-arrow-left"></span> Back';
+    backBtn.addEventListener('mouseenter', () => { backBtn.style.color = 'var(--text-primary)'; backBtn.style.background = 'var(--bg-hover)'; });
+    backBtn.addEventListener('mouseleave', () => { backBtn.style.color = 'var(--text-muted)'; backBtn.style.background = ''; });
+    backBtn.addEventListener('click', () => this.render());
+    header.appendChild(backBtn);
+    this.el.appendChild(header);
 
-    if (ext.author) {
-      const author = document.createElement('div');
-      author.className = 'extension-card-author';
-      author.textContent = ext.author;
-      info.appendChild(author);
+    // Scrollable content
+    const content = document.createElement('div');
+    content.style.cssText = 'flex: 1; overflow-y: auto; padding: 16px;';
+
+    // Top section: icon + info
+    const top = document.createElement('div');
+    top.style.cssText = 'display: flex; gap: 16px; margin-bottom: 16px;';
+
+    // Large icon
+    const iconEl = document.createElement('div');
+    iconEl.style.cssText = 'width: 80px; height: 80px; border-radius: 6px; background: var(--bg-surface); flex-shrink: 0; overflow: hidden; display: flex; align-items: center; justify-content: center;';
+    if (ext.iconUrl) {
+      const img = document.createElement('img');
+      img.src = ext.iconUrl;
+      img.style.cssText = 'width: 100%; height: 100%; object-fit: cover;';
+      img.onerror = () => { img.remove(); iconEl.innerHTML = '<span class="codicon codicon-extensions" style="font-size: 36px; color: var(--text-muted);"></span>'; };
+      iconEl.appendChild(img);
+    } else {
+      iconEl.innerHTML = '<span class="codicon codicon-extensions" style="font-size: 36px; color: var(--text-muted);"></span>';
     }
+    top.appendChild(iconEl);
 
-    headerRow.appendChild(info);
-    card.appendChild(headerRow);
+    // Info column
+    const infoCol = document.createElement('div');
+    infoCol.style.cssText = 'flex: 1; min-width: 0;';
+
+    const nameEl = document.createElement('div');
+    nameEl.style.cssText = 'font-size: 18px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px;';
+    nameEl.textContent = ext.displayName || ext.name;
+    infoCol.appendChild(nameEl);
+
+    const pubEl = document.createElement('div');
+    pubEl.style.cssText = 'font-size: 12px; color: var(--text-muted); margin-bottom: 8px;';
+    pubEl.textContent = ext.namespace;
+    infoCol.appendChild(pubEl);
+
+    // Metadata row
+    const metaRow = document.createElement('div');
+    metaRow.style.cssText = 'display: flex; gap: 12px; font-size: 11px; color: var(--text-muted); margin-bottom: 12px; flex-wrap: wrap;';
+
+    if (ext.version) {
+      const ver = document.createElement('span');
+      ver.textContent = `v${ext.version}`;
+      metaRow.appendChild(ver);
+    }
+    if (ext.downloadCount > 0) {
+      const dl = document.createElement('span');
+      dl.textContent = `${this.formatCount(ext.downloadCount)} installs`;
+      metaRow.appendChild(dl);
+    }
+    if (ext.averageRating > 0) {
+      const rating = document.createElement('span');
+      rating.textContent = `\u2605 ${ext.averageRating.toFixed(1)}`;
+      metaRow.appendChild(rating);
+    }
+    infoCol.appendChild(metaRow);
+
+    // Install / Uninstall button
+    const actionBtn = document.createElement('button');
+    if (isInstalled) {
+      actionBtn.textContent = 'Uninstall';
+      actionBtn.style.cssText = 'padding: 6px 20px; background: none; border: 1px solid var(--border); border-radius: 4px; color: var(--text-muted); cursor: pointer; font-size: 12px; font-family: inherit;';
+      actionBtn.addEventListener('mouseenter', () => { actionBtn.style.color = 'var(--error)'; actionBtn.style.borderColor = 'var(--error)'; });
+      actionBtn.addEventListener('mouseleave', () => { actionBtn.style.color = 'var(--text-muted)'; actionBtn.style.borderColor = 'var(--border)'; });
+      actionBtn.addEventListener('click', async () => {
+        actionBtn.textContent = 'Uninstalling...';
+        actionBtn.disabled = true;
+        try {
+          await (window as any).pmOs.extensionStore.uninstall(`${ext.namespace}.${ext.name}`);
+          this.installedExtensions = this.installedExtensions.filter(e => e.id !== `${ext.namespace}.${ext.name}`);
+          actionBtn.textContent = 'Uninstalled';
+          actionBtn.style.color = 'var(--success)';
+        } catch { actionBtn.textContent = 'Failed'; }
+      });
+    } else {
+      actionBtn.textContent = 'Install';
+      actionBtn.style.cssText = 'padding: 6px 20px; background: var(--accent); border: none; border-radius: 4px; color: var(--bg-primary); cursor: pointer; font-size: 12px; font-weight: 600; font-family: inherit;';
+      actionBtn.addEventListener('click', async () => {
+        actionBtn.textContent = 'Installing...';
+        actionBtn.disabled = true;
+        actionBtn.style.opacity = '0.6';
+        try {
+          await (window as any).pmOs.extensionStore.install(ext.namespace, ext.name, ext.version);
+          actionBtn.textContent = 'Installed';
+          actionBtn.style.background = 'none';
+          actionBtn.style.border = '1px solid var(--border)';
+          actionBtn.style.color = 'var(--success)';
+        } catch {
+          actionBtn.textContent = 'Install Failed';
+          actionBtn.style.background = 'var(--error)';
+          setTimeout(() => { actionBtn.textContent = 'Install'; actionBtn.style.background = 'var(--accent)'; actionBtn.style.opacity = '1'; actionBtn.disabled = false; }, 2000);
+        }
+      });
+    }
+    infoCol.appendChild(actionBtn);
+    top.appendChild(infoCol);
+    content.appendChild(top);
 
     // Description
-    const desc = document.createElement('div');
-    desc.className = 'extension-card-desc';
-    desc.textContent = ext.description;
-    card.appendChild(desc);
+    if (ext.description) {
+      const descHeader = document.createElement('div');
+      descHeader.style.cssText = 'font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 8px;';
+      descHeader.textContent = 'Description';
+      content.appendChild(descHeader);
 
-    // Meta: version + total size
-    const meta = document.createElement('div');
-    meta.className = 'extension-card-meta';
+      const descEl = document.createElement('div');
+      descEl.style.cssText = 'font-size: 13px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 16px;';
+      descEl.textContent = ext.description;
+      content.appendChild(descEl);
+    }
 
-    const version = document.createElement('span');
-    version.textContent = 'v' + ext.version;
-    meta.appendChild(version);
+    // Categories
+    if (ext.categories && ext.categories.length > 0) {
+      const catHeader = document.createElement('div');
+      catHeader.style.cssText = 'font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 8px;';
+      catHeader.textContent = 'Categories';
+      content.appendChild(catHeader);
 
-    const totalSize = this.computeTotalSize(ext);
-    const sizeEl = document.createElement('span');
-    sizeEl.textContent = this.formatSize(totalSize);
-    meta.appendChild(sizeEl);
-
-    card.appendChild(meta);
-
-    // Actions row
-    const actions = document.createElement('div');
-    actions.className = 'extension-card-actions';
-
-    if (ext.installed) {
-      const badge = document.createElement('span');
-      badge.className = 'extension-installed-badge';
-      badge.textContent = 'Installed';
-      actions.appendChild(badge);
-
-      const uninstallBtn = document.createElement('button');
-      uninstallBtn.className = 'extension-uninstall-btn';
-      uninstallBtn.textContent = 'Uninstall';
-      uninstallBtn.addEventListener('click', () => this.handleUninstall(ext.id, card));
-      actions.appendChild(uninstallBtn);
-    } else {
-      // Variant selector (e.g., whisper model size)
-      let variantSelect: HTMLSelectElement | null = null;
-      if (ext.dependencies) {
-        for (const dep of ext.dependencies) {
-          if (dep.variants && dep.variants.length > 0) {
-            variantSelect = document.createElement('select');
-            for (const v of dep.variants) {
-              const opt = document.createElement('option');
-              opt.value = v.id;
-              opt.textContent = v.name;
-              variantSelect.appendChild(opt);
-            }
-            actions.appendChild(variantSelect);
-          }
-        }
+      const catRow = document.createElement('div');
+      catRow.style.cssText = 'display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px;';
+      for (const cat of ext.categories) {
+        const chip = document.createElement('span');
+        chip.style.cssText = 'padding: 2px 8px; background: var(--bg-surface); border-radius: 10px; font-size: 11px; color: var(--text-muted);';
+        chip.textContent = cat;
+        catRow.appendChild(chip);
       }
-
-      const installBtn = document.createElement('button');
-      installBtn.className = 'extension-install-btn';
-      installBtn.textContent = 'Install';
-      installBtn.addEventListener('click', () => {
-        const options: any = {};
-        if (variantSelect) {
-          options.whisperModel = variantSelect.value;
-        }
-        this.handleInstall(ext.id, card, installBtn, options);
-      });
-      actions.appendChild(installBtn);
+      content.appendChild(catRow);
     }
 
-    card.appendChild(actions);
-    return card;
-  }
+    // More info section
+    const infoHeader = document.createElement('div');
+    infoHeader.style.cssText = 'font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 8px;';
+    infoHeader.textContent = 'More Information';
+    content.appendChild(infoHeader);
 
-  private async handleInstall(id: string, card: HTMLElement, btn: HTMLButtonElement, options: any): Promise<void> {
-    btn.disabled = true;
-    btn.textContent = 'Installing...';
+    const infoTable = document.createElement('div');
+    infoTable.style.cssText = 'font-size: 12px; display: grid; grid-template-columns: 100px 1fr; gap: 6px 12px; color: var(--text-secondary);';
 
-    // Add progress bar
-    const progressContainer = document.createElement('div');
-    progressContainer.className = 'extension-progress-bar';
-    const progressFill = document.createElement('div');
-    progressFill.className = 'extension-progress-fill';
-    progressFill.style.width = '0%';
-    progressContainer.appendChild(progressFill);
-    card.appendChild(progressContainer);
+    const addRow = (label: string, value: string) => {
+      const l = document.createElement('span');
+      l.style.cssText = 'color: var(--text-muted);';
+      l.textContent = label;
+      infoTable.appendChild(l);
+      const v = document.createElement('span');
+      v.textContent = value;
+      infoTable.appendChild(v);
+    };
 
-    // Listen for progress
-    this.disposeProgress = (window as any).pmOs.extensionStore.onProgress((data: any) => {
-      if (data.extensionId !== id) return;
-      if (data.percent !== undefined) {
-        progressFill.style.width = data.percent + '%';
-      }
-      if (data.phase === 'error') {
-        btn.textContent = 'Error';
-        btn.disabled = false;
-        progressContainer.remove();
-      }
-    });
+    addRow('Publisher', ext.namespace || 'Unknown');
+    addRow('Version', ext.version || 'Unknown');
+    addRow('Identifier', `${ext.namespace}.${ext.name}`);
+    if (ext.downloadCount > 0) addRow('Downloads', this.formatCount(ext.downloadCount));
 
-    this.disposeComplete = (window as any).pmOs.extensionStore.onComplete((data: any) => {
-      if (data.extensionId !== id) return;
-      this.disposeProgress?.();
-      this.disposeComplete?.();
-      progressContainer.remove();
-
-      // Re-render to show installed state
-      this.render();
-    });
-
-    try {
-      await (window as any).pmOs.extensionStore.install(id, options);
-    } catch {
-      btn.textContent = 'Install';
-      btn.disabled = false;
-      progressContainer.remove();
-    }
-  }
-
-  private async handleUninstall(id: string, card: HTMLElement): Promise<void> {
-    try {
-      await (window as any).pmOs.extensionStore.uninstall(id);
-
-      // Show restart notice
-      const notice = document.createElement('div');
-      notice.className = 'extension-restart-notice';
-      notice.textContent = 'Restart required to complete uninstall';
-      card.appendChild(notice);
-
-      // Re-render after a brief delay
-      setTimeout(() => this.render(), 1000);
-    } catch {
-      // Silently fail
-    }
-  }
-
-  private computeTotalSize(ext: any): number {
-    let total = ext.size || 0;
-    if (ext.dependencies) {
-      for (const dep of ext.dependencies) {
-        if (dep.variants && dep.variants.length > 0) {
-          total += dep.variants[0].size;
-        } else {
-          total += dep.size || 0;
-        }
-      }
-    }
-    return total;
-  }
-
-  private formatSize(bytes: number): string {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1048576) return (bytes / 1024).toFixed(0) + ' KB';
-    if (bytes < 1073741824) return (bytes / 1048576).toFixed(0) + ' MB';
-    return (bytes / 1073741824).toFixed(1) + ' GB';
-  }
-
-  private createExtensionIcon(iconName?: string): SVGElement {
-    const svgNS = 'http://www.w3.org/2000/svg';
-    const svg = document.createElementNS(svgNS, 'svg');
-    svg.setAttribute('viewBox', '0 0 24 24');
-    svg.setAttribute('fill', 'none');
-    svg.setAttribute('stroke', 'currentColor');
-    svg.setAttribute('stroke-width', '1.5');
-    svg.setAttribute('stroke-linecap', 'round');
-    svg.setAttribute('stroke-linejoin', 'round');
-
-    if (iconName === 'microphone') {
-      const path1 = document.createElementNS(svgNS, 'path');
-      path1.setAttribute('d', 'M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z');
-      svg.appendChild(path1);
-
-      const path2 = document.createElementNS(svgNS, 'path');
-      path2.setAttribute('d', 'M19 10v2a7 7 0 0 1-14 0v-2');
-      svg.appendChild(path2);
-
-      const line1 = document.createElementNS(svgNS, 'line');
-      line1.setAttribute('x1', '12'); line1.setAttribute('y1', '19');
-      line1.setAttribute('x2', '12'); line1.setAttribute('y2', '23');
-      svg.appendChild(line1);
-
-      const line2 = document.createElementNS(svgNS, 'line');
-      line2.setAttribute('x1', '8'); line2.setAttribute('y1', '23');
-      line2.setAttribute('x2', '16'); line2.setAttribute('y2', '23');
-      svg.appendChild(line2);
-    } else {
-      // Default: package/box icon
-      const path1 = document.createElementNS(svgNS, 'path');
-      path1.setAttribute('d', 'M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z');
-      svg.appendChild(path1);
-
-      const polyline = document.createElementNS(svgNS, 'polyline');
-      polyline.setAttribute('points', '3.27 6.96 12 12.01 20.73 6.96');
-      svg.appendChild(polyline);
-
-      const line1 = document.createElementNS(svgNS, 'line');
-      line1.setAttribute('x1', '12'); line1.setAttribute('y1', '22.08');
-      line1.setAttribute('x2', '12'); line1.setAttribute('y2', '12');
-      svg.appendChild(line1);
-    }
-
-    return svg;
+    content.appendChild(infoTable);
+    this.el.appendChild(content);
   }
 }

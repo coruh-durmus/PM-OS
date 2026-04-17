@@ -72,6 +72,58 @@ export class SettingsPanel {
     this.renderInfoSection('MCP Center', 'codicon-server', 'Manage Model Context Protocol servers that provide AI tools and context for your projects.', [
       { label: 'Auto-Start MCP Servers', description: 'Automatically start configured MCP servers when opening a workspace', type: 'toggle', value: localStorage.getItem('pm-os-mcp-autostart') || 'on', onChange: (val) => localStorage.setItem('pm-os-mcp-autostart', val) },
     ]);
+
+    // Load extension settings
+    this.loadExtensionSettings();
+  }
+
+  private async loadExtensionSettings(): Promise<void> {
+    try {
+      const configs: any[] = await (window as any).pmOs.extensions?.getConfigs?.() ?? [];
+
+      for (const config of configs) {
+        if (!config.properties || Object.keys(config.properties).length === 0) continue;
+
+        const settings: SettingItem[] = [];
+
+        for (const [key, schema] of Object.entries(config.properties) as [string, any][]) {
+          const type = schema.type;
+          const defaultVal = schema.default;
+          const storedVal = localStorage.getItem(`ext-setting-${key}`);
+
+          if (type === 'boolean') {
+            settings.push({
+              label: schema.description?.split('.')[0] || key.split('.').pop() || key,
+              description: schema.description || '',
+              type: 'toggle',
+              value: storedVal ?? (defaultVal ? 'on' : 'off'),
+              onChange: (val) => localStorage.setItem(`ext-setting-${key}`, val),
+            });
+          } else if (type === 'string' && schema.enum) {
+            settings.push({
+              label: schema.description?.split('.')[0] || key.split('.').pop() || key,
+              description: schema.description || '',
+              type: 'select',
+              options: schema.enum,
+              value: storedVal ?? (defaultVal || schema.enum[0]),
+              onChange: (val) => localStorage.setItem(`ext-setting-${key}`, val),
+            });
+          } else if (type === 'number' || type === 'integer') {
+            settings.push({
+              label: schema.description?.split('.')[0] || key.split('.').pop() || key,
+              description: schema.description || '',
+              type: 'number',
+              value: storedVal ?? String(defaultVal ?? 0),
+              onChange: (val) => localStorage.setItem(`ext-setting-${key}`, val),
+            });
+          }
+        }
+
+        if (settings.length > 0) {
+          this.renderSection(config.title || config.extensionName, settings);
+        }
+      }
+    } catch {}
   }
 
   private renderInfoSection(title: string, iconClass: string, description: string, settings: SettingItem[]): void {

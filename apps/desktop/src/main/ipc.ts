@@ -71,6 +71,14 @@ export function registerIpcHandlers(
     return extensionHost?.getManifests() ?? [];
   });
 
+  ipcMain.handle('extension:get-themes', () => {
+    return extensionHost?.getExtensionThemes() ?? [];
+  });
+
+  ipcMain.handle('extension:get-configs', () => {
+    return extensionHost?.getExtensionConfigs() ?? [];
+  });
+
   ipcMain.handle('dialog:open-directory', async () => {
     const result = await dialog.showOpenDialog(window, {
       properties: ['openDirectory'],
@@ -538,8 +546,34 @@ export function registerIpcHandlers(
   ipcMain.handle('audio:stop-capture', () => audioCaptureManager?.stopCapture());
   ipcMain.handle('audio:get-status', () => audioCaptureManager?.getStatus());
 
-  // Extension store handlers
-  ipcMain.handle('extension-store:get-registry', () => extensionStoreManager?.getRegistry());
-  ipcMain.handle('extension-store:install', (_event, id: string, options?: any) => extensionStoreManager?.installExtension(id, options));
-  ipcMain.handle('extension-store:uninstall', (_event, id: string) => extensionStoreManager?.uninstallExtension(id));
+  // Extension command handlers
+  ipcMain.handle('extension:get-commands', () => {
+    const { getDeclaredCommands } = require('./vscode-shim/commands');
+    const cmds = getDeclaredCommands();
+    return Array.from(cmds.entries()).map(([id, data]: [string, { title: string; category?: string }]) => ({
+      id,
+      title: data.title,
+      category: data.category,
+    }));
+  });
+
+  ipcMain.handle('extension:execute-command', async (_e: any, commandId: string, ...args: any[]) => {
+    const { executeCommand } = require('./vscode-shim/commands');
+    return executeCommand(commandId, ...args);
+  });
+
+  // Extension store handlers (Open VSX)
+  ipcMain.handle('extension-store:search', (_event, query: string, category?: string, offset?: number, size?: number) =>
+    extensionStoreManager?.search(query, category, offset, size));
+  ipcMain.handle('extension-store:get-extension', (_event, namespace: string, name: string) =>
+    extensionStoreManager?.getExtension(namespace, name));
+  ipcMain.handle('extension-store:install', (_event, namespace: string, name: string, version: string) =>
+    extensionStoreManager?.install(namespace, name, version));
+  ipcMain.handle('extension-store:uninstall', (_event, id: string) =>
+    extensionStoreManager?.uninstall(id));
+  ipcMain.handle('extension-store:get-installed', () =>
+    extensionStoreManager?.getInstalled() ?? []);
+  ipcMain.handle('extension-store:check-updates', () => extensionStoreManager?.checkUpdates() ?? []);
+  ipcMain.handle('extension-store:update', (_e: any, namespace: string, name: string, version: string) =>
+    extensionStoreManager?.updateExtension(namespace, name, version));
 }

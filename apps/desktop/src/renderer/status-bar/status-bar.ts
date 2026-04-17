@@ -22,6 +22,25 @@ export class StatusBar {
     this.projectEl.textContent = 'No project open';
     right.appendChild(this.projectEl);
     this.el.appendChild(right);
+
+    // Listen for extension status bar items
+    (window as any).pmOs.extensions?.onStatusBarUpdate?.((data: any) => {
+      let item = this.el.querySelector(`[data-ext-status="${data.id}"]`) as HTMLElement;
+      if (!item) {
+        item = document.createElement('span');
+        item.dataset.extStatus = data.id;
+        item.style.cssText = 'cursor: pointer; padding: 0 6px; font-size: 11px;';
+        this.el.appendChild(item);
+      }
+      item.textContent = data.text || '';
+      item.title = data.tooltip || '';
+      if (data.color) item.style.color = data.color;
+    });
+
+    (window as any).pmOs.extensions?.onStatusBarRemove?.((data: any) => {
+      const item = this.el.querySelector(`[data-ext-status="${data.id}"]`);
+      if (item) item.remove();
+    });
   }
 
   setProject(name: string): void {
