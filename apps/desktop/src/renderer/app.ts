@@ -170,6 +170,10 @@ export class App {
         e.preventDefault();
         this.commandPalette.toggle();
       }
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'f') {
+        e.preventDefault();
+        this.sidebarPanel.show('search');
+      }
       if (e.ctrlKey && e.shiftKey && e.key === '`') {
         e.preventDefault();
         this.bottomPanel.show();

@@ -92,6 +92,15 @@ export class BottomPanel {
     });
 
     this.setupResize();
+
+    // Listen for "Open in Terminal" from explorer context menu
+    window.addEventListener('pm-os:open-terminal-in-folder', ((e: CustomEvent) => {
+      const folderPath = e.detail?.path;
+      if (folderPath) {
+        this.show();
+        this.createNewTerminal(undefined, folderPath);
+      }
+    }) as EventListener);
   }
 
   toggle(): void {

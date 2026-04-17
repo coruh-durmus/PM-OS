@@ -5,6 +5,7 @@
   "main": "dist/main/index.js",
   "scripts": {
     "dev": "pnpm build && electron .",
+    "dev:watch": "pnpm build && (esbuild src/renderer/index.ts --bundle --platform=browser --outfile=dist/renderer/index.js --sourcemap --watch &) && electron .",
     "build:main": "esbuild src/main/index.ts --bundle --platform=node --external:electron --external:node-pty --outfile=dist/main/index.js --sourcemap",
     "build:preload": "esbuild src/preload/index.ts --bundle --platform=node --external:electron --outfile=dist/preload/index.js --sourcemap && esbuild src/main/wcv-preload.ts --bundle --platform=node --external:electron --outfile=dist/main/wcv-preload.js --sourcemap",
     "build:renderer": "esbuild src/renderer/index.ts --bundle --platform=browser --outfile=dist/renderer/index.js --sourcemap",

@@ -1,3 +1,4 @@
+import { SettingsPanel } from '../internal-panels/settings-panel';
 import { AiPanel } from '../internal-panels/ai-panel';
 import { AutomationsPanel } from '../internal-panels/automations-panel';
 import { McpPanel } from '../internal-panels/mcp-panel';
@@ -22,6 +23,12 @@ export class PanelContainer {
   private browserSidebarEl: HTMLElement | null = null;
   private browserSidebarVisible = false;
   private fileViewer: FileViewerPanel | null = null;
+  private browserToolbarEl: HTMLElement | null = null;
+  private browserUrlText: HTMLElement | null = null;
+  private browserBackBtn: HTMLButtonElement | null = null;
+  private browserFwdBtn: HTMLButtonElement | null = null;
+  private browserReloadBtn: HTMLButtonElement | null = null;
+  private browserCurrentUrl: string = '';
 
   constructor(el: HTMLElement) {
     this.el = el;
@@ -32,15 +39,33 @@ export class PanelContainer {
     this.resizeObserver.observe(this.el);
 
     window.pmOs.wcv.onUrlChanged(({ id, url }: { id: string; url: string }) => {
-      if (id === 'browser' && this.browserSidebar) {
-        this.browserSidebar.setActiveUrl(url, '');
+      if (id === 'browser') {
+        this.browserCurrentUrl = url;
+        if (this.browserSidebar) this.browserSidebar.setActiveUrl(url, '');
+        if (this.browserUrlText) {
+          try {
+            const u = new URL(url);
+            this.browserUrlText.textContent = u.hostname + (u.pathname !== '/' ? u.pathname : '');
+          } catch {
+            this.browserUrlText.textContent = url;
+          }
+        }
+        this.updateBrowserNavState();
       }
     });
 
     window.pmOs.wcv.onTitleChanged(({ id, title }: { id: string; title: string }) => {
       if (id === 'browser' && this.browserSidebar) {
-        // Update title on the active tab
         this.browserSidebar.updateActiveTab('', title);
+      }
+    });
+
+    window.pmOs.wcv.onLoading(({ id, loading }: { id: string; loading: boolean }) => {
+      if (id === 'browser' && this.browserReloadBtn) {
+        this.browserReloadBtn.innerHTML = loading
+          ? '<span class="codicon codicon-close"></span>'
+          : '<span class="codicon codicon-refresh"></span>';
+        this.browserReloadBtn.title = loading ? 'Stop' : 'Reload';
       }
     });
   }
@@ -102,10 +127,12 @@ export class PanelContainer {
 
     this.activePanelId = id;
 
-    // Show/hide browser sidebar
+    // Show/hide browser sidebar and toolbar
     if (id === 'browser') {
+      this.showBrowserToolbar();
       this.showBrowserSidebar();
     } else {
+      this.hideBrowserToolbar();
       this.hideBrowserSidebar();
     }
   }
@@ -192,6 +219,141 @@ export class PanelContainer {
     }
   }
 
+  private buildBrowserToolbar(): HTMLElement {
+    const bar = document.createElement('div');
+    bar.style.cssText = 'position: absolute; top: 0; left: 0; right: 0; height: 32px; z-index: 6; display: flex; align-items: center; padding: 0 8px; gap: 2px; background: var(--bg-secondary); border-bottom: 1px solid var(--border); font-size: 13px;';
+
+    const btnStyle = 'width: 24px; height: 24px; border: none; background: none; color: var(--text-muted); cursor: pointer; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; padding: 0; transition: color 100ms ease, background 100ms ease;';
+
+    const makeBtn = (iconClass: string, title: string, onClick: () => void): HTMLButtonElement => {
+      const btn = document.createElement('button');
+      btn.style.cssText = btnStyle;
+      btn.title = title;
+      btn.innerHTML = `<span class="codicon ${iconClass}"></span>`;
+      btn.addEventListener('mouseenter', () => { btn.style.color = 'var(--text-primary)'; btn.style.background = 'var(--bg-hover)'; });
+      btn.addEventListener('mouseleave', () => { btn.style.color = 'var(--text-muted)'; btn.style.background = ''; });
+      btn.addEventListener('click', onClick);
+      return btn;
+    };
+
+    // Left group
+    const left = document.createElement('div');
+    left.style.cssText = 'display: flex; align-items: center; gap: 2px;';
+
+    left.appendChild(makeBtn('codicon-layout-sidebar-left', 'Toggle Sidebar (Cmd+B)', () => this.toggleBrowserSidebar()));
+
+    this.browserBackBtn = makeBtn('codicon-arrow-left', 'Back', () => window.pmOs.wcv.goBack('browser'));
+    left.appendChild(this.browserBackBtn);
+
+    this.browserFwdBtn = makeBtn('codicon-arrow-right', 'Forward', () => window.pmOs.wcv.goForward('browser'));
+    left.appendChild(this.browserFwdBtn);
+
+    this.browserReloadBtn = makeBtn('codicon-refresh', 'Reload', () => window.pmOs.wcv.reload('browser'));
+    left.appendChild(this.browserReloadBtn);
+
+    bar.appendChild(left);
+
+    // Center — URL bar
+    const center = document.createElement('div');
+    center.style.cssText = 'flex: 1; display: flex; justify-content: center; padding: 0 12px; min-width: 0;';
+
+    const urlBar = document.createElement('div');
+    urlBar.style.cssText = 'display: flex; align-items: center; gap: 6px; padding: 3px 12px; background: var(--bg-surface); border-radius: 16px; max-width: 400px; width: 100%; cursor: text; transition: background 100ms ease;';
+    urlBar.addEventListener('mouseenter', () => { urlBar.style.background = 'var(--bg-hover)'; });
+    urlBar.addEventListener('mouseleave', () => { urlBar.style.background = 'var(--bg-surface)'; });
+
+    const linkIcon = document.createElement('span');
+    linkIcon.className = 'codicon codicon-link';
+    linkIcon.style.cssText = 'color: var(--text-muted); flex-shrink: 0; font-size: 12px;';
+    urlBar.appendChild(linkIcon);
+
+    this.browserUrlText = document.createElement('span');
+    this.browserUrlText.style.cssText = 'color: var(--text-muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;';
+    this.browserUrlText.textContent = 'google.com';
+    urlBar.appendChild(this.browserUrlText);
+
+    // Click to edit URL
+    urlBar.addEventListener('click', () => {
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.value = this.browserCurrentUrl || '';
+      input.style.cssText = 'width: 100%; background: var(--bg-primary); border: 1px solid var(--accent); border-radius: 16px; padding: 3px 12px; color: var(--text-primary); font-size: 12px; outline: none; font-family: inherit;';
+
+      urlBar.style.display = 'none';
+      center.appendChild(input);
+      input.focus();
+      input.select();
+
+      const commit = () => {
+        let url = input.value.trim();
+        if (url) {
+          if (!url.includes('://')) {
+            if (url.includes('.') && !url.includes(' ')) {
+              url = 'https://' + url;
+            } else {
+              url = 'https://www.google.com/search?q=' + encodeURIComponent(url);
+            }
+          }
+          window.pmOs.wcv.navigate('browser', url);
+        }
+        input.remove();
+        urlBar.style.display = 'flex';
+      };
+
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') commit();
+        if (e.key === 'Escape') { input.remove(); urlBar.style.display = 'flex'; }
+      });
+      input.addEventListener('blur', () => { input.remove(); urlBar.style.display = 'flex'; });
+    });
+
+    center.appendChild(urlBar);
+    bar.appendChild(center);
+
+    // Right group
+    const right = document.createElement('div');
+    right.style.cssText = 'display: flex; align-items: center; gap: 2px;';
+    right.appendChild(makeBtn('codicon-bookmark', 'Bookmark This Page', () => {
+      if (this.browserSidebar && this.browserCurrentUrl) {
+        this.browserSidebar.bookmarkCurrentPage?.();
+      }
+    }));
+    bar.appendChild(right);
+
+    return bar;
+  }
+
+  private async updateBrowserNavState(): Promise<void> {
+    try {
+      const state = await window.pmOs.wcv.getState('browser');
+      if (state) {
+        if (this.browserBackBtn) {
+          this.browserBackBtn.style.opacity = state.canGoBack ? '1' : '0.3';
+          this.browserBackBtn.style.pointerEvents = state.canGoBack ? 'auto' : 'none';
+        }
+        if (this.browserFwdBtn) {
+          this.browserFwdBtn.style.opacity = state.canGoForward ? '1' : '0.3';
+          this.browserFwdBtn.style.pointerEvents = state.canGoForward ? 'auto' : 'none';
+        }
+      }
+    } catch {}
+  }
+
+  private showBrowserToolbar(): void {
+    if (!this.browserToolbarEl) {
+      this.browserToolbarEl = this.buildBrowserToolbar();
+      this.el.appendChild(this.browserToolbarEl);
+    }
+    this.browserToolbarEl.style.display = 'flex';
+    this.updateBrowserNavState();
+  }
+
+  private hideBrowserToolbar(): void {
+    if (this.browserToolbarEl) {
+      this.browserToolbarEl.style.display = 'none';
+    }
+  }
+
   async openFile(filePath: string): Promise<void> {
     await this.showPanel('file-viewer');
     if (this.fileViewer) {
@@ -210,11 +372,12 @@ export class PanelContainer {
   private getBounds(): { x: number; y: number; width: number; height: number } {
     const rect = this.el.getBoundingClientRect();
     const sidebarOffset = this.browserSidebarVisible ? 220 : 0;
+    const toolbarHeight = this.activePanelId === 'browser' ? 32 : 0;
     return {
       x: Math.round(rect.x) + sidebarOffset,
-      y: Math.round(rect.y),
+      y: Math.round(rect.y) + toolbarHeight,
       width: Math.round(rect.width) - sidebarOffset,
-      height: Math.round(rect.height),
+      height: Math.round(rect.height) - toolbarHeight,
     };
   }
 
@@ -264,6 +427,11 @@ export class PanelContainer {
         const panel = new FileViewerPanel(wrapper);
         panel.render();
         this.fileViewer = panel;
+        break;
+      }
+      case 'settings': {
+        const panel = new SettingsPanel(wrapper);
+        panel.render();
         break;
       }
       default: {

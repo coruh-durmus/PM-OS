@@ -8,6 +8,7 @@ export class ProjectsPanel {
   private el: HTMLElement;
   private disposeWorkspaceListener: (() => void) | null = null;
   private options: ProjectsPanelOptions;
+  private rendering = false;
 
   constructor(container: HTMLElement, options?: ProjectsPanelOptions) {
     this.el = container;
@@ -15,40 +16,48 @@ export class ProjectsPanel {
   }
 
   async render(): Promise<void> {
-    while (this.el.firstChild) this.el.removeChild(this.el.firstChild);
-    this.el.style.cssText = 'display: flex; flex-direction: column; height: 100%;';
+    // Guard against concurrent renders (workspace listener can fire during await)
+    if (this.rendering) return;
+    this.rendering = true;
 
-    // Clean up previous workspace listener
-    if (this.disposeWorkspaceListener) {
-      this.disposeWorkspaceListener();
-      this.disposeWorkspaceListener = null;
-    }
-
-    // Check if a workspace is open
-    let workspaceOpen = false;
     try {
-      workspaceOpen = await (window as any).pmOs.workspace.isOpen();
-    } catch {
-      workspaceOpen = false;
+      while (this.el.firstChild) this.el.removeChild(this.el.firstChild);
+      this.el.style.cssText = 'display: flex; flex-direction: column; height: 100%;';
+
+      // Clean up previous workspace listener
+      if (this.disposeWorkspaceListener) {
+        this.disposeWorkspaceListener();
+        this.disposeWorkspaceListener = null;
+      }
+
+      // Check if a workspace is open
+      let workspaceOpen = false;
+      try {
+        workspaceOpen = await (window as any).pmOs.workspace.isOpen();
+      } catch {
+        workspaceOpen = false;
+      }
+
+      if (!workspaceOpen) {
+        this.renderNoWorkspace();
+        return;
+      }
+
+      // Explorer tree (fills the entire panel)
+      const treeContainer = document.createElement('div');
+      treeContainer.style.cssText = 'flex: 1; overflow-y: auto;';
+      this.el.appendChild(treeContainer);
+
+      const explorer = new ExplorerPanel(treeContainer, { onOpenFile: this.options.onOpenFile });
+      await explorer.render();
+    } finally {
+      this.rendering = false;
     }
 
-    // Listen for workspace changes (both open→close and close→open)
+    // Set up workspace listener AFTER render completes (not during)
     this.disposeWorkspaceListener = (window as any).pmOs.workspace.onChanged(() => {
       this.render();
     });
-
-    if (!workspaceOpen) {
-      this.renderNoWorkspace();
-      return;
-    }
-
-    // Explorer tree (fills the entire panel)
-    const treeContainer = document.createElement('div');
-    treeContainer.style.cssText = 'flex: 1; overflow-y: auto;';
-    this.el.appendChild(treeContainer);
-
-    const explorer = new ExplorerPanel(treeContainer, { onOpenFile: this.options.onOpenFile });
-    await explorer.render();
   }
 
   private renderNoWorkspace(): void {
@@ -81,5 +90,10 @@ export class ProjectsPanel {
     emptyState.appendChild(hint);
 
     this.el.appendChild(emptyState);
+
+    // Still listen for workspace changes in no-workspace state
+    this.disposeWorkspaceListener = (window as any).pmOs.workspace.onChanged(() => {
+      this.render();
+    });
   }
 }

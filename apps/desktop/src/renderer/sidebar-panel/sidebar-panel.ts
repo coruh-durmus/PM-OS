@@ -1,5 +1,7 @@
 import { ProjectsPanel } from '../internal-panels/projects-panel.js';
 import { ExtensionStorePanel } from '../internal-panels/extension-store-panel.js';
+import { SearchPanel } from '../internal-panels/search-panel.js';
+import { SourceControlPanel } from '../internal-panels/source-control-panel.js';
 
 export class SidebarPanel {
   private el: HTMLElement;
@@ -55,6 +57,16 @@ export class SidebarPanel {
       }
       case 'extensions': {
         const panel = new ExtensionStorePanel(this.contentEl);
+        await panel.render();
+        break;
+      }
+      case 'search': {
+        const panel = new SearchPanel(this.contentEl, { onOpenFile: this.onOpenFile });
+        await panel.render();
+        break;
+      }
+      case 'source-control': {
+        const panel = new SourceControlPanel(this.contentEl, { onOpenFile: this.onOpenFile });
         await panel.render();
         break;
       }

@@ -112,256 +112,6 @@ export function registerIpcHandlers(
     ptyManager?.destroy(id);
   });
 
-  // Project Manager handlers
-  const os = require('os');
-  const path = require('path');
-
-  // Lazy-load ProjectStore — create it once when first used
-  let projectStore: any = null;
-  const getProjectStore = () => {
-    if (!projectStore) {
-      try {
-        const { ProjectStore } = require(path.join(__dirname, '..', '..', '..', '..', 'extensions', 'project-manager', 'dist', 'index.js'));
-        const baseDir = path.join(os.homedir(), 'pm-os-projects');
-        projectStore = new ProjectStore(baseDir);
-      } catch (e) {
-        safeError('[IPC] Failed to load ProjectStore:', e);
-      }
-    }
-    return projectStore;
-  };
-
-  let decisionLog: any = null;
-  const getDecisionLog = (projectPath: string) => {
-    try {
-      const { DecisionLog } = require(path.join(__dirname, '..', '..', '..', '..', 'extensions', 'project-manager', 'dist', 'index.js'));
-      return new DecisionLog(projectPath);
-    } catch { return null; }
-  };
-
-  ipcMain.handle('project:list', () => {
-    return getProjectStore()?.list() ?? [];
-  });
-
-  // Resolve full path to `claude` CLI — Electron doesn't inherit user shell PATH
-  let claudeCliPath: string | null = null;
-  const resolveClaudeCli = (): string | null => {
-    if (claudeCliPath !== null) return claudeCliPath || null;
-    const { execFileSync } = require('child_process');
-    const fs = require('fs');
-    const candidates = [
-      '/usr/local/bin/claude',
-      '/opt/homebrew/bin/claude',
-      path.join(os.homedir(), '.claude', 'bin', 'claude'),
-      path.join(os.homedir(), '.local', 'bin', 'claude'),
-    ];
-    try {
-      claudeCliPath = execFileSync('which', ['claude'], { encoding: 'utf-8', timeout: 3000 }).trim();
-      safeLog('[IPC] Found claude CLI via which:', claudeCliPath);
-      return claudeCliPath;
-    } catch {}
-    for (const p of candidates) {
-      if (fs.existsSync(p)) {
-        claudeCliPath = p;
-        safeLog('[IPC] Found claude CLI at:', claudeCliPath);
-        return claudeCliPath;
-      }
-    }
-    safeError('[IPC] claude CLI not found in PATH or known locations');
-    claudeCliPath = '';
-    return null;
-  };
-
-  ipcMain.handle('project:create', async (_e, name: string) => {
-    safeLog('[IPC] project:create START — name:', name);
-
-    if (!workspaceManager?.isOpen()) {
-      safeError('[IPC] project:create FAIL — no workspace open');
-      throw new Error('No workspace is open');
-    }
-
-    // ── Phase 1: Create project folder + files (sync, fast) ──────────
-    const store = getProjectStore();
-    if (!store) {
-      safeError('[IPC] project:create FAIL — ProjectStore not loaded');
-      throw new Error('ProjectStore not available');
-    }
-
-    const fs = require('fs');
-    let projectPath: string;
-    try {
-      store.create(name);
-      projectPath = path.join(os.homedir(), 'pm-os-projects', name);
-      safeLog('[IPC] project:create — folder created:', projectPath);
-    } catch (err: any) {
-      safeError('[IPC] project:create FAIL — store.create():', err?.message);
-      throw err;
-    }
-
-    // .claude/settings.json
-    try {
-      const claudeDir = path.join(projectPath, '.claude');
-      if (!fs.existsSync(claudeDir)) fs.mkdirSync(claudeDir, { recursive: true });
-      fs.writeFileSync(
-        path.join(claudeDir, 'settings.json'),
-        JSON.stringify({
-          permissions: {
-            allow: ['Read', 'Write', 'Edit', 'Bash', 'Glob', 'Grep', 'WebFetch', 'WebSearch'],
-          },
-        }, null, 2) + '\n',
-        'utf-8',
-      );
-      safeLog('[IPC] project:create — .claude/settings.json written');
-    } catch (err: any) {
-      safeError('[IPC] project:create — .claude/settings.json failed:', err?.message);
-    }
-
-    // Initial CLAUDE.md (Notion link updated later in background)
-    try {
-      fs.writeFileSync(
-        path.join(projectPath, 'CLAUDE.md'),
-        [
-          `# ${name}`,
-          '',
-          '## Project Overview',
-          'This is a PM-OS managed project.',
-          '',
-          '## Structure',
-          '- `.pm-os/` — Project configuration and metadata',
-          '- `.claude/` — Claude Code settings',
-          '- `docs/` — Documentation',
-          '- `.memory/` — AI memory (gitignored)',
-          '',
-          '## Resources',
-          '- Notion page: setting up...',
-          '- Decision log: `.pm-os/decisions.log`',
-          '- Project links: `.pm-os/links.json`',
-          `- Workspace: ${path.join(os.homedir(), 'pm-os-projects')}`,
-          '',
-          '## Instructions',
-          '- Use the Notion page for all project documentation',
-          '- Decision log is at `.pm-os/decisions.log`',
-          '- Project links are in `.pm-os/links.json`',
-          '',
-        ].join('\n'),
-        'utf-8',
-      );
-      safeLog('[IPC] project:create — CLAUDE.md written');
-    } catch (err: any) {
-      safeError('[IPC] project:create — CLAUDE.md failed:', err?.message);
-    }
-
-    safeLog('[IPC] project:create DONE — returning path to renderer');
-
-    // ── Phase 2: Notion page via Claude CLI (fire-and-forget) ────────
-    const claudeBin = resolveClaudeCli();
-    if (claudeBin) {
-      const { execFile } = require('child_process');
-      const prompt = [
-        `Create a new Notion page titled "${name}" using the Notion MCP tool (notion-create-pages).`,
-        `Add these sections as headings: Overview, Requirements, Decisions, Notes.`,
-        `After creating the page, respond with ONLY this JSON on one line:`,
-        `{"url": "<the_page_url>", "id": "<the_page_id>"}`,
-      ].join(' ');
-
-      safeLog('[IPC] project:create — spawning claude CLI at:', claudeBin);
-
-      // Runs entirely in background — does NOT block the return below
-      (async () => {
-        try {
-          const stdout: string = await new Promise((resolve, reject) => {
-            const child = execFile(claudeBin, [
-              '-p', prompt,
-              '--dangerously-skip-permissions',
-              '--output-format', 'text',
-              '--max-turns', '5',
-            ], {
-              timeout: 120000,
-              encoding: 'utf-8',
-              env: { ...process.env },
-            }, (err: any, stdout: string, stderr: string) => {
-              if (err) {
-                safeError('[IPC] claude CLI error:', err?.message);
-                if (stderr) safeError('[IPC] claude CLI stderr:', stderr.slice(0, 500));
-                reject(err);
-              } else {
-                resolve(stdout);
-              }
-            });
-            safeLog('[IPC] claude CLI spawned, pid:', child.pid);
-          });
-
-          safeLog('[IPC] claude CLI finished, stdout length:', stdout.length);
-          safeLog('[IPC] claude CLI output preview:', stdout.slice(0, 500));
-
-          const jsonMatch = stdout.match(/\{[^}]*"url"\s*:\s*"[^"]*"[^}]*\}/);
-          if (jsonMatch) {
-            const parsed = JSON.parse(jsonMatch[0]);
-            safeLog('[IPC] Notion page created — url:', parsed.url, 'id:', parsed.id);
-
-            // Update config.json
-            const configPath = path.join(projectPath, '.pm-os', 'config.json');
-            const existingConfig = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
-            if (parsed.url) existingConfig.notionPageUrl = parsed.url;
-            if (parsed.id) existingConfig.notionPageId = parsed.id;
-            fs.writeFileSync(configPath, JSON.stringify(existingConfig, null, 2) + '\n', 'utf-8');
-            safeLog('[IPC] config.json updated with Notion info');
-
-            // Update CLAUDE.md placeholder
-            const claudeMdPath = path.join(projectPath, 'CLAUDE.md');
-            const claudeMd = fs.readFileSync(claudeMdPath, 'utf-8');
-            fs.writeFileSync(
-              claudeMdPath,
-              claudeMd.replace('- Notion page: setting up...', `- Notion page: ${parsed.url}`),
-              'utf-8',
-            );
-            safeLog('[IPC] CLAUDE.md updated with Notion link');
-
-            // Notify renderer
-            try { window.webContents.send('project:notion-ready', { projectPath, notionPageUrl: parsed.url, notionPageId: parsed.id }); } catch {}
-          } else {
-            safeError('[IPC] Could not parse Notion JSON from claude output');
-            safeError('[IPC] Full output:', stdout.slice(0, 1000));
-          }
-        } catch (err: any) {
-          safeError('[IPC] Notion background task failed:', err?.message);
-        }
-      })();
-    } else {
-      safeLog('[IPC] claude CLI not found — skipping Notion page');
-    }
-
-    return projectPath;
-  });
-
-  ipcMain.handle('project:delete', (_e, name: string) => {
-    getProjectStore()?.delete(name);
-  });
-
-  ipcMain.handle('project:get-config', (_e, projectPath: string) => {
-    return getProjectStore()?.getConfig(projectPath);
-  });
-
-  ipcMain.handle('project:get-links', (_e, projectPath: string) => {
-    return getProjectStore()?.getLinks(projectPath) ?? [];
-  });
-
-  ipcMain.handle('project:add-link', (_e, projectPath: string, link: any) => {
-    getProjectStore()?.addLink(projectPath, link);
-  });
-
-  ipcMain.handle('project:remove-link', (_e, projectPath: string, linkId: string) => {
-    getProjectStore()?.removeLink(projectPath, linkId);
-  });
-
-  ipcMain.handle('project:get-decisions', (_e, projectPath: string) => {
-    return getDecisionLog(projectPath)?.list() ?? [];
-  });
-
-  ipcMain.handle('project:add-decision', (_e, projectPath: string, entry: any) => {
-    return getDecisionLog(projectPath)?.append(entry);
-  });
-
   // File system handlers
   ipcMain.handle('fs:read-dir', async (_e, dirPath: string) => {
     const fs = require('fs');
@@ -395,6 +145,35 @@ export function registerIpcHandlers(
     const fs = require('fs');
     try {
       fs.writeFileSync(filePath, content, 'utf-8');
+      return true;
+    } catch { return false; }
+  });
+
+  ipcMain.handle('fs:mkdir', async (_e, dirPath: string) => {
+    const fs = require('fs');
+    try {
+      fs.mkdirSync(dirPath, { recursive: true });
+      return true;
+    } catch { return false; }
+  });
+
+  ipcMain.handle('fs:delete', async (_e, targetPath: string) => {
+    const fs = require('fs');
+    try {
+      const stat = fs.statSync(targetPath);
+      if (stat.isDirectory()) {
+        fs.rmSync(targetPath, { recursive: true, force: true });
+      } else {
+        fs.unlinkSync(targetPath);
+      }
+      return true;
+    } catch { return false; }
+  });
+
+  ipcMain.handle('fs:rename', async (_e, oldPath: string, newPath: string) => {
+    const fs = require('fs');
+    try {
+      fs.renameSync(oldPath, newPath);
       return true;
     } catch { return false; }
   });
@@ -524,6 +303,8 @@ export function registerIpcHandlers(
   // Settings handlers
   ipcMain.handle('settings:get-enabled-apps', () => {
     const fs = require('fs');
+    const os = require('os');
+    const path = require('path');
     const settingsPath = path.join(os.homedir(), '.pm-os', 'settings.json');
     try {
       if (fs.existsSync(settingsPath)) return JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
@@ -533,6 +314,8 @@ export function registerIpcHandlers(
 
   ipcMain.handle('settings:save', (_e: any, settings: any) => {
     const fs = require('fs');
+    const os = require('os');
+    const path = require('path');
     const dir = path.join(os.homedir(), '.pm-os');
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(path.join(dir, 'settings.json'), JSON.stringify(settings, null, 2));
@@ -543,12 +326,14 @@ export function registerIpcHandlers(
   // survives across sessions but is removed on uninstall.
   ipcMain.handle('settings:isOnboarded', () => {
     const fs = require('fs');
+    const path = require('path');
     const flagPath = path.join(app.getPath('userData'), 'onboarded.flag');
     return fs.existsSync(flagPath);
   });
 
   ipcMain.handle('settings:setOnboarded', () => {
     const fs = require('fs');
+    const path = require('path');
     const flagPath = path.join(app.getPath('userData'), 'onboarded.flag');
     fs.writeFileSync(flagPath, 'true', 'utf-8');
   });
@@ -642,6 +427,33 @@ export function registerIpcHandlers(
     } catch (err: any) {
       return { success: false, error: err.stderr?.toString() || err.message };
     }
+  });
+
+  ipcMain.handle('git:diff', async (_e, projectPath: string) => {
+    const { execSync } = require('child_process');
+    try {
+      const diff = execSync('git diff', { cwd: projectPath, encoding: 'utf-8', maxBuffer: 1024 * 1024 });
+      return diff;
+    } catch { return ''; }
+  });
+
+  ipcMain.handle('git:diff-staged', async (_e, projectPath: string) => {
+    const { execSync } = require('child_process');
+    try {
+      const diff = execSync('git diff --staged', { cwd: projectPath, encoding: 'utf-8', maxBuffer: 1024 * 1024 });
+      return diff;
+    } catch { return ''; }
+  });
+
+  ipcMain.handle('git:status-files', async (_e, projectPath: string) => {
+    const { execSync } = require('child_process');
+    try {
+      const output = execSync('git status --porcelain', { cwd: projectPath, encoding: 'utf-8' });
+      return output.split('\n').filter(Boolean).map((line: string) => ({
+        status: line.substring(0, 2).trim(),
+        path: line.substring(3),
+      }));
+    } catch { return []; }
   });
 
   // MCP health check — reads Claude Code's global .mcp.json

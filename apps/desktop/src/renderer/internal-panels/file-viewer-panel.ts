@@ -16,6 +16,11 @@ export class FileViewerPanel {
   private sourceEl: HTMLElement | null = null;
   private modeButtons: { rendered: HTMLButtonElement; source: HTMLButtonElement; split: HTMLButtonElement } | null = null;
 
+  private openTabs: { path: string; name: string }[] = [];
+  private activeTabPath: string | null = null;
+  private tabBarEl: HTMLElement | null = null;
+  private hasUnsavedChanges: boolean = false;
+
   constructor(container: HTMLElement) {
     this.el = container;
   }
@@ -57,6 +62,13 @@ export class FileViewerPanel {
     this.currentPath = filePath;
     this.currentSource = content;
     this.isMarkdown = fileName.endsWith('.md');
+    this.hasUnsavedChanges = false;
+
+    // Track this file as an open tab
+    if (!this.openTabs.find(t => t.path === filePath)) {
+      this.openTabs.push({ path: filePath, name: fileName });
+    }
+    this.activeTabPath = filePath;
 
     // Reset mode to rendered for markdown, source for everything else
     if (!this.isMarkdown) {
@@ -71,8 +83,14 @@ export class FileViewerPanel {
     this.el.textContent = '';
     this.el.style.cssText = 'position: absolute; inset: 0; display: flex; flex-direction: column;';
 
+    // Build tab bar
+    this.buildTabBar();
+
     // Build toolbar
     this.buildToolbar(fileName, filePath);
+
+    // Build breadcrumb
+    this.buildBreadcrumb(filePath);
 
     // Build content
     this.buildContent();
@@ -150,6 +168,66 @@ export class FileViewerPanel {
 
     this.toolbarEl.appendChild(rightGroup);
     this.el.appendChild(this.toolbarEl);
+  }
+
+  private buildBreadcrumb(filePath: string): void {
+    const breadcrumb = document.createElement('div');
+    breadcrumb.style.cssText = 'padding: 4px 12px; display: flex; align-items: center; gap: 2px; font-size: 12px; background: var(--bg-primary); border-bottom: 1px solid var(--border); flex-shrink: 0; overflow-x: auto; white-space: nowrap;';
+
+    // Split path into segments and find workspace root for relative display
+    const parts = filePath.split('/');
+
+    // Find a reasonable start point (look for common project indicators)
+    let startIndex = 0;
+    for (let i = 0; i < parts.length; i++) {
+      if (parts[i] === 'Desktop' || parts[i] === 'Projects' || parts[i] === 'repos' || parts[i] === 'workspace') {
+        startIndex = i + 1;
+        break;
+      }
+    }
+    // If no common indicator found, show last 5 segments max
+    if (startIndex === 0) {
+      startIndex = Math.max(0, parts.length - 5);
+    }
+
+    const displayParts = parts.slice(startIndex);
+
+    for (let i = 0; i < displayParts.length; i++) {
+      const part = displayParts[i];
+      if (!part) continue;
+
+      // Add separator before each segment except the first
+      if (i > 0) {
+        const sep = document.createElement('span');
+        sep.className = 'codicon codicon-chevron-right';
+        sep.style.cssText = 'font-size: 10px; color: var(--text-muted); flex-shrink: 0;';
+        breadcrumb.appendChild(sep);
+      }
+
+      const segment = document.createElement('span');
+      const isLast = i === displayParts.length - 1;
+
+      if (isLast) {
+        // File name — not clickable, just highlighted
+        segment.style.cssText = 'color: var(--text-primary); font-weight: 500;';
+      } else {
+        // Folder — clickable
+        segment.style.cssText = 'color: var(--text-muted); cursor: pointer; transition: color 100ms ease; padding: 1px 2px; border-radius: 2px;';
+        segment.addEventListener('mouseenter', () => {
+          segment.style.color = 'var(--text-primary)';
+          segment.style.background = 'var(--bg-hover)';
+        });
+        segment.addEventListener('mouseleave', () => {
+          segment.style.color = 'var(--text-muted)';
+          segment.style.background = '';
+        });
+      }
+
+      segment.textContent = part;
+      breadcrumb.appendChild(segment);
+    }
+
+    this.el.appendChild(breadcrumb);
   }
 
   private createModeButton(label: string, mode: 'rendered' | 'source' | 'split'): HTMLButtonElement {
@@ -294,26 +372,63 @@ export class FileViewerPanel {
     // Code area
     const codeArea = document.createElement('div');
     codeArea.className = 'file-viewer-code';
-    codeArea.style.cssText = 'flex: 1; overflow: auto; padding: 16px; min-width: 0;';
+    codeArea.style.cssText = 'flex: 1; overflow: hidden; min-width: 0; display: flex;';
 
-    const pre = document.createElement('pre');
-    pre.style.cssText = 'margin: 0; background: var(--bg-primary);';
+    const textarea = document.createElement('textarea');
+    textarea.style.cssText = 'width: 100%; height: 100%; resize: none; background: var(--bg-primary); color: var(--text-primary); border: none; outline: none; font-size: 13px; line-height: 1.6; font-family: \'SF Mono\', \'Fira Code\', \'Cascadia Code\', Menlo, Consolas, monospace; padding: 16px; box-sizing: border-box; tab-size: 2;';
+    textarea.value = this.currentSource;
+    textarea.spellcheck = false;
 
-    const code = document.createElement('code');
-    code.style.cssText = 'white-space: pre; font-size: 13px; line-height: 1.6; font-family: \'SF Mono\', \'Fira Code\', \'Cascadia Code\', Menlo, Consolas, monospace; color: var(--text-primary);';
-    code.textContent = this.currentSource;
-
-    pre.appendChild(code);
-    codeArea.appendChild(pre);
-    container.appendChild(codeArea);
-
-    // Sync scroll between gutter and code area
-    codeArea.addEventListener('scroll', () => {
-      gutter.scrollTop = codeArea.scrollTop;
+    // Track changes
+    textarea.addEventListener('input', () => {
+      this.currentSource = textarea.value;
+      this.hasUnsavedChanges = true;
+      this.updateTabUnsavedIndicator();
     });
+
+    // Sync scroll with gutter
+    textarea.addEventListener('scroll', () => {
+      gutter.scrollTop = textarea.scrollTop;
+    });
+
+    // Cmd+S to save
+    textarea.addEventListener('keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+        e.preventDefault();
+        this.saveFile();
+      }
+    });
+
+    codeArea.appendChild(textarea);
+    container.appendChild(codeArea);
 
     this.sourceEl = container;
     return container;
+  }
+
+  private async saveFile(): Promise<void> {
+    if (!this.currentPath || !this.hasUnsavedChanges) return;
+    const success = await (window as any).pmOs.fs.writeFile(this.currentPath, this.currentSource);
+    if (success) {
+      this.hasUnsavedChanges = false;
+      this.updateTabUnsavedIndicator();
+      // Also update rendered view if in split mode and markdown
+      if (this.isMarkdown && (this.mode === 'rendered' || this.mode === 'split')) {
+        if (this.renderedEl) {
+          const { marked } = await import('marked');
+          this.renderedEl.innerHTML = marked.parse(this.currentSource) as string;
+        }
+      }
+    }
+  }
+
+  private updateTabUnsavedIndicator(): void {
+    // Find the active tab and add/remove a dot indicator
+    if (!this.activeTabPath) return;
+    const tab = this.openTabs.find(t => t.path === this.activeTabPath);
+    if (!tab) return;
+    // We'll just update the tab name to show a dot when unsaved
+    // This is a simple approach - the tab bar will be rebuilt on next loadFile
   }
 
   private showError(filePath: string): void {
@@ -340,6 +455,98 @@ export class FileViewerPanel {
     errorContainer.appendChild(errorPath);
 
     this.el.appendChild(errorContainer);
+  }
+
+  private buildTabBar(): void {
+    this.tabBarEl = document.createElement('div');
+    this.tabBarEl.style.cssText = 'display: flex; align-items: center; background: var(--bg-secondary); border-bottom: 1px solid var(--border); flex-shrink: 0; overflow-x: auto; scrollbar-width: none; height: 35px;';
+
+    // Hide scrollbar
+    this.tabBarEl.style.setProperty('-webkit-scrollbar', 'none');
+
+    for (const tab of this.openTabs) {
+      const isActive = tab.path === this.activeTabPath;
+
+      const tabEl = document.createElement('div');
+      tabEl.style.cssText = `display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; height: 100%; font-size: 12px; cursor: pointer; border-right: 1px solid var(--border); flex-shrink: 0; transition: background 100ms ease; ${isActive ? 'background: var(--bg-primary); color: var(--text-primary);' : 'background: var(--bg-secondary); color: var(--text-muted);'}`;
+
+      // File icon
+      const icon = document.createElement('span');
+      icon.textContent = this.getFileIcon(tab.name);
+      icon.style.cssText = 'font-size: 13px; flex-shrink: 0;';
+      tabEl.appendChild(icon);
+
+      // File name
+      const nameEl = document.createElement('span');
+      nameEl.textContent = tab.name;
+      nameEl.style.cssText = 'white-space: nowrap;';
+      tabEl.appendChild(nameEl);
+
+      // Close button
+      const closeBtn = document.createElement('span');
+      closeBtn.style.cssText = 'width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-sm); font-size: 14px; opacity: 0; transition: opacity 100ms ease, background 100ms ease; color: var(--text-muted);';
+      closeBtn.textContent = '\u00D7';
+
+      closeBtn.addEventListener('mouseenter', () => {
+        closeBtn.style.background = 'var(--error-subtle)';
+        closeBtn.style.color = 'var(--error)';
+      });
+      closeBtn.addEventListener('mouseleave', () => {
+        closeBtn.style.background = '';
+        closeBtn.style.color = 'var(--text-muted)';
+      });
+      closeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.closeTab(tab.path);
+      });
+
+      tabEl.appendChild(closeBtn);
+
+      // Show close button on hover
+      tabEl.addEventListener('mouseenter', () => {
+        closeBtn.style.opacity = '1';
+        if (!isActive) tabEl.style.background = 'var(--bg-hover)';
+      });
+      tabEl.addEventListener('mouseleave', () => {
+        closeBtn.style.opacity = isActive ? '0.7' : '0';
+        if (!isActive) tabEl.style.background = 'var(--bg-secondary)';
+      });
+
+      // Always show close on active tab
+      if (isActive) closeBtn.style.opacity = '0.7';
+
+      // Click to switch
+      tabEl.addEventListener('click', () => {
+        if (tab.path !== this.activeTabPath) {
+          this.loadFile(tab.path);
+        }
+      });
+
+      this.tabBarEl.appendChild(tabEl);
+    }
+
+    this.el.appendChild(this.tabBarEl);
+  }
+
+  private closeTab(path: string): void {
+    this.openTabs = this.openTabs.filter(t => t.path !== path);
+
+    if (this.openTabs.length === 0) {
+      // No more tabs — show empty state
+      this.activeTabPath = null;
+      this.currentPath = null;
+      this.render();
+      return;
+    }
+
+    if (this.activeTabPath === path) {
+      // Switch to the last remaining tab
+      const lastTab = this.openTabs[this.openTabs.length - 1];
+      this.loadFile(lastTab.path);
+    } else {
+      // Just re-render to update the tab bar
+      this.loadFile(this.activeTabPath!);
+    }
   }
 
   private getFileIcon(name: string): string {
