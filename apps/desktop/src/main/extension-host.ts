@@ -336,6 +336,83 @@ export class ExtensionHost {
     }
   }
 
+  async loadSingleExtension(extPath: string): Promise<{ success: boolean; id?: string; error?: string }> {
+    const manifestPaths = [
+      path.join(extPath, 'extension', 'package.json'),
+      path.join(extPath, 'package.json'),
+    ];
+
+    let manifest: any = null;
+    let manifestDir = extPath;
+    for (const mp of manifestPaths) {
+      try {
+        if (fs.existsSync(mp)) {
+          manifest = JSON.parse(fs.readFileSync(mp, 'utf-8'));
+          manifestDir = path.dirname(mp);
+          break;
+        }
+      } catch {}
+    }
+
+    if (!manifest) {
+      return { success: false, error: 'No package.json found' };
+    }
+
+    const id = manifest.name || path.basename(extPath);
+
+    // Skip if already loaded
+    if (this.extensions.has(id)) {
+      safeLog(`[ext-host] Extension ${id} already loaded`);
+      return { success: true, id };
+    }
+
+    const mainEntry = manifest.main || './dist/index.js';
+    const mainPath = path.resolve(manifestDir, mainEntry);
+
+    // Try to activate
+    if (fs.existsSync(mainPath)) {
+      try {
+        const instance = require(mainPath);
+        const ext = instance.default || instance;
+        if (typeof ext.activate === 'function') {
+          const context = this.createContext(
+            {
+              id,
+              name: manifest.displayName ?? manifest.name ?? path.basename(extPath),
+              version: manifest.version ?? '0.0.0',
+              description: manifest.description ?? '',
+              main: mainEntry,
+              contributes: manifest.contributes,
+            },
+            path.basename(extPath)
+          );
+          await ext.activate(context);
+          this.extensions.set(id, {
+            instance: ext,
+            context,
+            manifest: {
+              id,
+              name: manifest.displayName ?? manifest.name ?? path.basename(extPath),
+              version: manifest.version ?? '0.0.0',
+              description: manifest.description ?? '',
+              main: mainEntry,
+              contributes: manifest.contributes,
+            },
+          });
+          safeLog(`[ext-host] Hot-activated extension: ${id}`);
+        }
+      } catch (err) {
+        safeError(`[ext-host] Failed to hot-activate ${id}:`, err);
+      }
+    }
+
+    // Always process contributes (themes, commands, settings work without activation)
+    this.processContributes(manifest, manifestDir);
+
+    safeLog(`[ext-host] Hot-loaded extension: ${id}`);
+    return { success: true, id };
+  }
+
   async deactivateAll(): Promise<void> {
     for (const [id, ext] of this.extensions) {
       try {

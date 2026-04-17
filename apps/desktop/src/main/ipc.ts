@@ -79,6 +79,10 @@ export function registerIpcHandlers(
     return extensionHost?.getExtensionConfigs() ?? [];
   });
 
+  ipcMain.handle('extension:activate-installed', async (_e, extPath: string) => {
+    return extensionHost?.loadSingleExtension(extPath);
+  });
+
   ipcMain.handle('dialog:open-directory', async () => {
     const result = await dialog.showOpenDialog(window, {
       properties: ['openDirectory'],
@@ -437,6 +441,22 @@ export function registerIpcHandlers(
     }
   });
 
+  ipcMain.handle('git:clone', async (_e, url: string, targetPath: string) => {
+    const { execFileSync } = require('child_process');
+    const path = require('path');
+    try {
+      safeLog(`[ipc] git:clone ${url} into ${targetPath}`);
+      execFileSync('git', ['clone', url], { cwd: targetPath, encoding: 'utf-8', timeout: 300000, maxBuffer: 10 * 1024 * 1024 });
+      const repoName = url.split('/').pop()?.replace('.git', '') || 'repository';
+      const clonedPath = path.join(targetPath, repoName);
+      safeLog(`[ipc] git:clone success → ${clonedPath}`);
+      return { success: true, clonedPath };
+    } catch (err: any) {
+      safeError(`[ipc] git:clone failed:`, err.stderr?.toString() || err.message);
+      return { success: false, error: err.stderr?.toString() || err.message };
+    }
+  });
+
   ipcMain.handle('git:diff', async (_e, projectPath: string) => {
     const { execSync } = require('child_process');
     try {
@@ -530,6 +550,7 @@ export function registerIpcHandlers(
   ipcMain.handle('workspace:get-name', () => workspaceManager?.getName() ?? '');
   ipcMain.handle('workspace:get-recent', () => workspaceManager?.getRecent() ?? []);
   ipcMain.handle('workspace:open-folder', () => workspaceManager?.openFolder());
+  ipcMain.handle('workspace:open-path', (_e, folderPath: string) => workspaceManager?.openFolderDirect(folderPath));
   ipcMain.handle('workspace:open-from-file', () => workspaceManager?.openWorkspaceFromFile());
   ipcMain.handle('workspace:add-folder', () => workspaceManager?.addFolderToWorkspace());
   ipcMain.handle('workspace:save-as', () => workspaceManager?.saveWorkspaceAs());

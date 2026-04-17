@@ -69,6 +69,7 @@ const api = {
     getName: () => ipcRenderer.invoke('workspace:get-name'),
     getRecent: () => ipcRenderer.invoke('workspace:get-recent'),
     openFolder: () => ipcRenderer.invoke('workspace:open-folder'),
+    openPath: (folderPath: string) => ipcRenderer.invoke('workspace:open-path', folderPath),
     openFromFile: () => ipcRenderer.invoke('workspace:open-from-file'),
     addFolder: () => ipcRenderer.invoke('workspace:add-folder'),
     saveAs: () => ipcRenderer.invoke('workspace:save-as'),
@@ -101,6 +102,9 @@ const api = {
     push: (projectPath: string) => ipcRenderer.invoke('git:push', projectPath),
     pull: (projectPath: string) => ipcRenderer.invoke('git:pull', projectPath),
     commitAll: (projectPath: string, message: string) => ipcRenderer.invoke('git:commit-all', projectPath, message),
+    clone(url: string, targetPath: string): Promise<{ success: boolean; clonedPath?: string; error?: string }> {
+      return ipcRenderer.invoke('git:clone', url, targetPath);
+    },
     diff(projectPath: string): Promise<string> {
       return ipcRenderer.invoke('git:diff', projectPath);
     },
@@ -170,6 +174,9 @@ const api = {
     },
     executeCommand(commandId: string, ...args: any[]): Promise<any> {
       return ipcRenderer.invoke('extension:execute-command', commandId, ...args);
+    },
+    activateInstalled(extPath: string): Promise<any> {
+      return ipcRenderer.invoke('extension:activate-installed', extPath);
     },
   },
   extensionStore: {

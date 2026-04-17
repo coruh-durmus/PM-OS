@@ -8,7 +8,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 pnpm install                     # Install all workspace dependencies
 pnpm build                       # Build everything (packages → extensions → apps)
 pnpm dev                         # Build + launch Electron app
-pnpm test                        # Run all tests (~84 tests across 11 suites)
+pnpm dev:watch                   # Build + launch with auto-rebuild on renderer changes (Cmd+R to refresh)
+pnpm test                        # Run all tests (~84 tests across 14 suites)
 pnpm clean                       # Remove all dist/ directories
 
 # Desktop app only (from apps/desktop/)
@@ -27,32 +28,56 @@ cd apps/desktop && npx @electron/rebuild -f -w node-pty
 
 ## Architecture
 
-Custom Electron desktop app (Electron 41+, Chromium 146+) with a plugin-based extension system. Three layers communicate via IPC:
+Custom Electron desktop app (Electron 41+, Chromium 146+) with a plugin-based extension system, VS Code extension compatibility, and Open VSX marketplace integration. Three layers communicate via IPC:
 
-**Main Process** → manages Electron windows, WebContentsView panels, PTY terminals, file system, git, workspace state, notifications, session sync
-**Preload** → `contextBridge` exposes `window.pmOs` API (wcv, terminal, project, fs, workspace, git, mcp, notifications, dialog, settings)
-**Renderer** → single-page app with activity bar, panel container, bottom panel (multi-terminal), command palette, browser sidebar, theme system
+**Main Process** → manages Electron windows, WebContentsView panels, PTY terminals, file system, git, workspace state, notifications, session sync, extension host, VS Code API shim, extension store manager
+**Preload** → `contextBridge` exposes `window.pmOs` API (wcv, terminal, fs, workspace, git, mcp, notifications, dialog, settings, extensions, extensionStore)
+**Renderer** → single-page app with activity bar, panel container, bottom panel (multi-terminal), command palette, browser toolbar, file viewer, search, source control, settings, extension store, theme system
 
 ### Monorepo Layout
 
-- `packages/types` — shared TypeScript interfaces (`Extension`, `EventMap`, `PanelApi`, `ProjectConfig`, etc.)
+- `packages/types` — shared TypeScript interfaces (`Extension`, `EventMap`, `PanelApi`, etc.)
 - `packages/event-bus` — typed pub/sub with `Disposable` pattern
 - `packages/claude` — Anthropic SDK wrapper with `SummaryCache` (TTL+LRU) and `CostTracker`
 - `apps/desktop` — Electron shell (main + preload + renderer)
 - `apps/auth-backend` — Hono OAuth service (PostgreSQL, Docker)
-- `extensions/*` — 11 extensions loaded dynamically by `ExtensionHost`
+- `extensions/*` — 12 bundled extensions loaded dynamically by `ExtensionHost`
 
-### WebContentsView Panels
+### Key Renderer Components
 
-External sites (Slack, Notion, Figma, Gmail, Jira, Confluence, Calendar) are embedded via Electron's `WebContentsView` — not iframes (which are blocked by `X-Frame-Options: DENY`). Each panel gets a `persist:${id}` partition for session cookies. The user-agent is stripped of "Electron/" and app name to prevent sites from serving unsupported APIs like FedCM. Google auth cookies are automatically synced across all panel sessions via `SessionSync`.
-
-### Session Sync
-
-`SessionSync` (`src/main/session-sync.ts`) listens for cookie changes on Google auth domains (`.google.com`, `accounts.google.com`, `.googleapis.com`, etc.) and replicates them across all panel session partitions. A `syncing` flag prevents infinite replication loops. Only cookie sets are replicated — not removals — to avoid logout cascades.
+- `internal-panels/file-viewer-panel.ts` — File viewer with markdown rendering (marked + GFM), source view with line numbers, file tabs, breadcrumbs, editable textarea with Cmd+S save
+- `internal-panels/extension-store-panel.ts` — Open VSX marketplace UI: search, install/uninstall, detail view, update checking, installed tab
+- `internal-panels/settings-panel.ts` — Settings for terminal, editor, appearance, automations, MCP, plus dynamically loaded extension settings
+- `internal-panels/search-panel.ts` — Inline search in explorer with debounced results and match highlighting
+- `internal-panels/source-control-panel.ts` — Git status with color-coded file changes
+- `internal-panels/explorer-panel.ts` — VS Code-style workspace explorer with collapsible root folders, right-click context menu (create/rename/delete/open-in-terminal), inline search
+- `panels/panel-container.ts` — Manages all panels including browser toolbar (Arc-style: back/forward/reload/URL bar)
+- `bottom-panel/bottom-panel.ts` — VS Code-style terminal with shell dropdown, context menu, instances sidebar, maximize toggle
+- `welcome/welcome-screen.ts` — Cursor-style welcome screen with inline SVG logo, action cards, recent projects, git clone dialog
 
 ### Extension System
 
-Extensions export `{ activate(context), deactivate?() }`. The `ExtensionHost` scans `extensions/*/package.json`, reads `main`, calls `require()` (CJS). Extensions must bundle as CJS format (`--format=cjs` or default for `--platform=node`). Never set `"type": "module"` in extension `package.json`.
+#### Bundled Extensions
+Extensions export `{ activate(context), deactivate?() }`. The `ExtensionHost` scans `extensions/*/package.json`, reads `main`, calls `require()` (CJS). Extensions must bundle as CJS format. Never set `"type": "module"` in extension `package.json`.
+
+#### VS Code Extension Compatibility
+Installed extensions from Open VSX can `require('vscode')` — a module resolution hook in `extension-host.ts` intercepts this and returns our `vscode-shim/` implementation:
+- `vscode-shim/types.ts` — Uri, Position, Range, Selection, Disposable, EventEmitter, enums
+- `vscode-shim/commands.ts` — registerCommand, executeCommand, getDeclaredCommands
+- `vscode-shim/window.ts` — showInformationMessage, createStatusBarItem, createOutputChannel
+- `vscode-shim/workspace.ts` — getConfiguration, workspaceFolders, fs operations
+- `vscode-shim/index.ts` — re-exports all + extensions, languages (stubs), env
+
+#### Extension Store (Open VSX)
+`ExtensionStoreManager` connects to `https://open-vsx.org/api` for search, download VSIX, extract, and install. Extensions are stored at `<userData>/extensions/`. Hot-loading via `loadSingleExtension()` activates extensions without restart. `contributes.themes`, `contributes.commands`, and `contributes.configuration` are parsed from installed extension manifests.
+
+### WebContentsView Panels
+
+External sites (Slack, Notion, Figma, Gmail, Jira, Confluence, Calendar) are embedded via Electron's `WebContentsView` — not iframes. Each panel gets a `persist:${id}` partition. User-agent is stripped of "Electron/" to prevent FedCM. Google auth cookies synced across panels via `SessionSync`.
+
+### Browser Panel
+
+Arc-style navigation toolbar at the top (32px): sidebar toggle, back/forward/reload, centered URL bar (click to edit), bookmark button. Browser sidebar with bookmarks, folders, tabs, drag-and-drop. Toggles with `Cmd+B`.
 
 ### IPC Pattern
 
@@ -66,15 +91,11 @@ New IPC requires changes in three files: `ipc.ts` (handler), `preload/index.ts` 
 
 ### Terminal
 
-Multi-terminal support (VS Code-style). `PtyManager` spawns tmux sessions (`tmux new-session -A -s pm-os-N`) with fallback to raw shell. Renderer uses `@xterm/xterm` with `FitAddon`. Bottom panel manages multiple terminal tabs with create/kill/switch. Killing the last terminal hides the panel; reopening creates a fresh one. `Ctrl+`` toggles panel, `Ctrl+Shift+`` creates new terminal.
+Multi-terminal support (VS Code-style). `PtyManager` spawns shells directly (zsh/bash, no tmux). Shell dropdown for choosing zsh or bash. Context menu with rename, change CWD, clear, kill, copy, paste, select default shell. Instances sidebar auto-shows at 2+ terminals. Maximize toggle. Terminal opens in workspace folder; folder picker when multiple workspace folders exist. `Ctrl+`` toggles panel, `Ctrl+Shift+`` creates new terminal.
 
-### Browser Sidebar
+### Workspace & Explorer
 
-Arc-style vertical sidebar for the Browser panel with bookmarks, folders, tabs, drag-and-drop reordering. Toggles with `Cmd+B`. Persisted in localStorage (`pm-os-bookmarks-v2`).
-
-### Workspace & Projects
-
-Projects require an open workspace — both UI and backend (`project:create` IPC) enforce this. Welcome screen shows "Open Workspace" CTA when no workspace is selected, just "PMOS" logo when one is open. Onboarding flag persisted in Electron's `userData` directory (survives restarts, removed on uninstall).
+VS Code-style explorer with collapsible workspace root folders. Multi-folder workspace support via "Add Folder to Workspace" button. Right-click context menu: new file, new folder, rename, delete, open in terminal. Inline search with debounced results and match highlighting. Git info (branch, status, remote, contributors, last commit) per workspace root. Welcome screen (Cursor-style) with action cards: "Open project", "Clone repo" (inline dialog with native folder picker, auto-opens cloned workspace).
 
 ## Key Conventions
 
@@ -82,10 +103,11 @@ Projects require an open workspace — both UI and backend (`project:create` IPC
 - **TypeScript:** `ES2022` target, `bundler` module resolution, `strict` mode. All packages extend `tsconfig.base.json`.
 - **Testing:** Vitest. Tests live in `src/__tests__/`. Packages without tests use `--passWithNoTests`.
 - **Events:** Strongly typed via `EventMap` in `packages/types/src/events.ts`. Use `EventBus.on()` which returns a `Disposable`.
-- **Theming:** CSS custom properties (45+ design tokens including colors, shadows, transitions, spacing, blur, radii). 9 themes in `renderer/themes/themes.ts`. Persisted in `localStorage`.
-- **Design tokens:** Use CSS variables from `variables.css` — never hardcode colors, shadows, or transitions. Includes `--error-subtle`, `--accent-subtle`, `--accent-muted` for transparent tints.
+- **Theming:** CSS custom properties (45+ design tokens). 8 built-in themes + dynamic extension themes from Open VSX. Persisted in `localStorage`. Inline SVG logo uses `var(--text-primary)` and `var(--bg-primary)` for theme reactivity.
+- **Design tokens:** Use CSS variables from `variables.css` — never hardcode colors. Includes `--error-subtle`, `--accent-subtle`, `--accent-muted` for transparent tints.
+- **Icons:** Codicon font (`@vscode/codicons`) for all UI icons. Loaded via separate `codicon.css` in HTML. Never use unicode emoji for action icons.
 - **Safe logging:** Main process uses `safeLog`/`safeError` wrappers (try-catch around console calls) to prevent EPIPE crashes from broken PTY pipes.
-- **Workspace projects** live in `~/pm-os-projects/` with structure: `CLAUDE.md`, `.pm-os/config.json`, `.memory/project/` (committed), `.memory/user/` (gitignored).
+- **Inline UI:** `prompt()` and `alert()` don't work in Electron renderer — always use custom inline DOM elements for user input.
 
 ## Gotchas
 
@@ -93,9 +115,16 @@ Projects require an open workspace — both UI and backend (`project:create` IPC
 - WebContentsView user-agent must strip "Electron/" and app name or Google/Figma will serve FedCM which crashes
 - Same-domain popups must be allowed in `setWindowOpenHandler` for OAuth SSO flows (e.g., `figma.com/start_google_sso`)
 - Extensions are `require()`'d (CJS) — ESM format will fail with "module is not defined"
-- No hot reload — extension changes require app restart
 - `prompt()` and `alert()` don't work in Electron renderer — use custom inline UI elements
-- WebAuthn/passkeys are not fully supported in Electron's WebContentsView
+- WebAuthn/passkeys require code-signed app with Keychain entitlements — won't work in development (`npx electron`)
 - EPIPE errors from dead PTY pipes — main process has `uncaughtException` handler that suppresses these; all logging uses `safeLog`/`safeError`
 - CSS concat order matters — `variables.css` must come before `reset.css` in `build:css` or variables are undefined during parse
 - Google auth cookies are synced across panels — don't create separate auth flows per panel
+- VSIX download must use `res.pipe(file)` with `file.on('finish')` — manual `file.write()` causes truncated/corrupt ZIP files
+- HTTP redirects in Node.js `https.get` require `res.resume()` before following — otherwise the connection hangs
+- CSP must include `img-src 'self' https: data: file:` for extension icons from Open VSX and local installed extensions
+- `ProjectsPanel.render()` has a `rendering` guard to prevent duplicate explorers from concurrent workspace change events
+- Extension store uses `installingIds` Set to track in-progress installs — shared between list view and detail view
+- Browser toolbar height (32px) must be accounted for in `getBounds()` — WebContentsView starts below the toolbar
+- Browser sidebar CSS has `top: 32px` to sit below the toolbar — don't set to `top: 0`
+- vscode-shim `require.resolve('./vscode-shim/index')` generates a benign esbuild warning — the shim is bundled correctly

@@ -124,6 +124,18 @@ export class ExtensionStoreManager {
       this.sendProgress({ id, stage: 'registering', percent: 90 });
       const installed = this.getInstalled();
       const manifest = this.readManifest(extDir);
+      // Find icon file from the extracted extension
+      let iconPath: string | null = null;
+      if (manifest?.icon) {
+        const tryPaths = [
+          path.join(extDir, 'extension', manifest.icon),
+          path.join(extDir, manifest.icon),
+        ];
+        for (const ip of tryPaths) {
+          if (fs.existsSync(ip)) { iconPath = ip; break; }
+        }
+      }
+
       installed.push({
         id,
         name,
@@ -133,6 +145,7 @@ export class ExtensionStoreManager {
         version,
         installedAt: new Date().toISOString(),
         extensionPath: extDir,
+        iconPath: iconPath,
       });
       fs.writeFileSync(INSTALLED_FILE, JSON.stringify(installed, null, 2));
 

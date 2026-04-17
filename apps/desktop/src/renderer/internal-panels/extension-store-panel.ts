@@ -6,6 +6,7 @@ export class ExtensionStorePanel {
   private searchOffset: number = 0;
   private searching = false;
   private installedExtensions: any[] = [];
+  private installingIds: Set<string> = new Set();
 
   constructor(container: HTMLElement) {
     this.el = container;
@@ -161,24 +162,39 @@ export class ExtensionStorePanel {
     row1.appendChild(nameEl);
 
     const btn = document.createElement('button');
+    const extId = `${ext.namespace}.${ext.name}`;
     if (isInstalled) {
       btn.textContent = 'Installed';
       btn.style.cssText = 'padding: 1px 8px; font-size: 10px; background: none; border: 1px solid var(--border); border-radius: 2px; color: var(--success); cursor: default; font-family: inherit; flex-shrink: 0;';
+    } else if (this.installingIds.has(extId)) {
+      btn.textContent = 'Installing...';
+      btn.style.cssText = 'padding: 1px 8px; font-size: 10px; background: var(--accent); border: none; border-radius: 2px; color: var(--bg-primary); cursor: default; font-family: inherit; flex-shrink: 0; opacity: 0.6;';
+      btn.disabled = true;
     } else {
       btn.textContent = 'Install';
       btn.style.cssText = 'padding: 1px 8px; font-size: 10px; background: var(--accent); border: none; border-radius: 2px; color: var(--bg-primary); cursor: pointer; font-weight: 600; font-family: inherit; flex-shrink: 0;';
       btn.addEventListener('click', async (e) => {
         e.stopPropagation();
-        btn.textContent = '...';
+        this.installingIds.add(extId);
+        btn.textContent = 'Installing...';
         btn.style.opacity = '0.6';
         btn.disabled = true;
         try {
           await (window as any).pmOs.extensionStore.install(ext.namespace, ext.name, ext.version);
+          // Hot-load the extension (no restart needed)
+          try { await (window as any).pmOs.extensions.activateInstalled(
+            (await (window as any).pmOs.extensionStore.getInstalled()).find((e: any) => e.id === extId)?.extensionPath || ''
+          ); } catch {}
+          // Update installed list
+          this.installedExtensions.push({ id: extId, namespace: ext.namespace, name: ext.name, displayName: ext.displayName, version: ext.version });
+          this.installingIds.delete(extId);
           btn.textContent = 'Installed';
           btn.style.background = 'none';
           btn.style.border = '1px solid var(--border)';
           btn.style.color = 'var(--success)';
+          btn.style.opacity = '1';
         } catch {
+          this.installingIds.delete(extId);
           btn.textContent = 'Failed';
           btn.style.background = 'var(--error)';
           setTimeout(() => { btn.textContent = 'Install'; btn.style.background = 'var(--accent)'; btn.style.opacity = '1'; btn.disabled = false; }, 2000);
@@ -229,13 +245,36 @@ export class ExtensionStorePanel {
 
     for (const ext of this.installedExtensions) {
       const row = document.createElement('div');
-      row.style.cssText = 'display: flex; padding: 8px 10px; gap: 10px; transition: background 80ms;';
+      row.style.cssText = 'display: flex; padding: 8px 10px; gap: 10px; cursor: pointer; transition: background 80ms;';
       row.addEventListener('mouseenter', () => { row.style.background = 'var(--bg-hover)'; });
       row.addEventListener('mouseleave', () => { row.style.background = ''; });
+      // Click to show detail
+      row.addEventListener('click', (e) => {
+        if ((e.target as HTMLElement).tagName === 'BUTTON') return;
+        this.showDetail({
+          name: ext.name,
+          namespace: ext.namespace,
+          displayName: ext.displayName,
+          description: ext.description,
+          version: ext.version,
+          iconUrl: ext.iconPath ? `file://${ext.iconPath}` : null,
+          downloadCount: 0,
+          averageRating: null,
+          categories: [],
+        });
+      });
 
       const icon = document.createElement('div');
-      icon.style.cssText = 'width: 42px; height: 42px; border-radius: 4px; background: var(--bg-surface); flex-shrink: 0; display: flex; align-items: center; justify-content: center;';
-      icon.innerHTML = '<span class="codicon codicon-extensions" style="font-size: 20px; color: var(--text-muted);"></span>';
+      icon.style.cssText = 'width: 42px; height: 42px; border-radius: 4px; background: var(--bg-surface); flex-shrink: 0; overflow: hidden; display: flex; align-items: center; justify-content: center;';
+      if (ext.iconPath) {
+        const img = document.createElement('img');
+        img.src = `file://${ext.iconPath}`;
+        img.style.cssText = 'width: 100%; height: 100%; object-fit: cover;';
+        img.onerror = () => { img.remove(); icon.innerHTML = '<span class="codicon codicon-extensions" style="font-size: 20px; color: var(--text-muted);"></span>'; };
+        icon.appendChild(img);
+      } else {
+        icon.innerHTML = '<span class="codicon codicon-extensions" style="font-size: 20px; color: var(--text-muted);"></span>';
+      }
       row.appendChild(icon);
 
       const info = document.createElement('div');
@@ -311,6 +350,9 @@ export class ExtensionStorePanel {
     this.el.textContent = '';
     this.el.style.cssText = 'height: 100%; display: flex; flex-direction: column; overflow: hidden;';
 
+    // Refresh installed list to catch installs done from list view
+    try { this.installedExtensions = await (window as any).pmOs.extensionStore.getInstalled(); } catch {}
+
     const isInstalled = this.installedExtensions.some(e => e.id === `${ext.namespace}.${ext.name}`);
 
     // Back button header
@@ -384,8 +426,35 @@ export class ExtensionStorePanel {
     infoCol.appendChild(metaRow);
 
     // Install / Uninstall button
+    const detailExtId = `${ext.namespace}.${ext.name}`;
+    const isInstalling = this.installingIds.has(detailExtId);
     const actionBtn = document.createElement('button');
-    if (isInstalled) {
+    if (isInstalling) {
+      actionBtn.textContent = 'Installing...';
+      actionBtn.style.cssText = 'padding: 6px 20px; background: var(--accent); border: none; border-radius: 4px; color: var(--bg-primary); cursor: default; font-size: 12px; font-weight: 600; font-family: inherit; opacity: 0.6;';
+      actionBtn.disabled = true;
+
+      // Listen for install completion so this button updates live
+      const cleanupProgress = (window as any).pmOs.extensionStore.onProgress((data: any) => {
+        if (data.id === detailExtId) {
+          if (data.stage === 'complete') {
+            cleanupProgress();
+            this.installingIds.delete(detailExtId);
+            actionBtn.textContent = 'Installed';
+            actionBtn.style.opacity = '1';
+            actionBtn.style.background = 'none';
+            actionBtn.style.border = '1px solid var(--border)';
+            actionBtn.style.color = 'var(--success)';
+          } else if (data.stage === 'error') {
+            cleanupProgress();
+            this.installingIds.delete(detailExtId);
+            actionBtn.textContent = 'Failed';
+            actionBtn.style.opacity = '1';
+            actionBtn.style.background = 'var(--error)';
+          }
+        }
+      });
+    } else if (isInstalled) {
       actionBtn.textContent = 'Uninstall';
       actionBtn.style.cssText = 'padding: 6px 20px; background: none; border: 1px solid var(--border); border-radius: 4px; color: var(--text-muted); cursor: pointer; font-size: 12px; font-family: inherit;';
       actionBtn.addEventListener('mouseenter', () => { actionBtn.style.color = 'var(--error)'; actionBtn.style.borderColor = 'var(--error)'; });
@@ -409,6 +478,13 @@ export class ExtensionStorePanel {
         actionBtn.style.opacity = '0.6';
         try {
           await (window as any).pmOs.extensionStore.install(ext.namespace, ext.name, ext.version);
+          // Hot-load the extension (no restart needed)
+          const extId = `${ext.namespace}.${ext.name}`;
+          try { await (window as any).pmOs.extensions.activateInstalled(
+            (await (window as any).pmOs.extensionStore.getInstalled()).find((e: any) => e.id === extId)?.extensionPath || ''
+          ); } catch {}
+          // Update installed list
+          this.installedExtensions.push({ id: extId, namespace: ext.namespace, name: ext.name, displayName: ext.displayName, version: ext.version });
           actionBtn.textContent = 'Installed';
           actionBtn.style.background = 'none';
           actionBtn.style.border = '1px solid var(--border)';

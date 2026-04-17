@@ -24,6 +24,26 @@ process.on('uncaughtException', (error) => {
 // This makes Google fall back to standard OAuth popup flow which works fine.
 app.commandLine.appendSwitch('disable-features', 'FedCm,FedCmButtonMode,FedCmIdpSigninStatus,FedCmMultipleIdentityProviders,ThirdPartyCookieDeprecation,TrackingProtection3pcd');
 
+// Enable WebAuthentication (passkeys/FIDO2) support in Electron
+app.commandLine.appendSwitch('enable-features', 'WebAuthenticationMacOSPasskeys');
+app.commandLine.appendSwitch('enable-web-authentication-api');
+
+// Log WebAuthn/passkey events for debugging auth issues
+app.on('certificate-error', (_event, _wc, url, error) => {
+  try { console.log(`[auth:cert-error] ${url}: ${error}`); } catch {}
+});
+
+// Handle select-hid-device for hardware security keys (FIDO2/U2F)
+app.on('select-hid-device' as any, (event: any, details: any, callback: any) => {
+  try { console.log(`[auth:hid-device]`, JSON.stringify(details)); } catch {}
+  // Auto-select the first HID device if available
+  if (details?.deviceList?.length > 0) {
+    callback(details.deviceList[0].deviceId);
+  } else {
+    callback('');
+  }
+});
+
 import { WcvManager } from './wcv-manager.js';
 import { SessionSync } from './session-sync.js';
 import { registerIpcHandlers } from './ipc.js';

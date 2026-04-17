@@ -139,9 +139,26 @@ export class WcvManager {
       const popupUa = childWindow.webContents.getUserAgent().replace(/\s*Electron\/\S+/, '');
       childWindow.webContents.setUserAgent(popupUa);
 
-      // Grant permissions in popup
-      childWindow.webContents.session.setPermissionRequestHandler((_wc, _perm, cb) => cb(true));
-      childWindow.webContents.session.setPermissionCheckHandler(() => true);
+      // Grant permissions in popup — with WebAuthn logging
+      childWindow.webContents.session.setPermissionRequestHandler((_wc, permission, cb, details) => {
+        safeLog(`[${id}:popup:permission-request] ${permission}`, JSON.stringify(details || {}));
+        cb(true);
+      });
+      childWindow.webContents.session.setPermissionCheckHandler((_wc, permission, _origin, details) => {
+        safeLog(`[${id}:popup:permission-check] ${permission}`, JSON.stringify(details || {}));
+        return true;
+      });
+      childWindow.webContents.session.setDevicePermissionHandler((_details) => {
+        safeLog(`[${id}:popup:device-permission]`, JSON.stringify(_details || {}));
+        return true;
+      });
+
+      // Log WebAuthn/credential failures in popup
+      childWindow.webContents.on('console-message', (_event, level, message, line, sourceId) => {
+        if (level >= 2 || message.toLowerCase().includes('credential') || message.toLowerCase().includes('webauthn') || message.toLowerCase().includes('passkey')) {
+          safeLog(`[${id}:popup:console] ${message} (${sourceId}:${line})`);
+        }
+      });
 
       // Only reload parent AFTER popup fully closes
       childWindow.on('closed', () => {
@@ -151,9 +168,21 @@ export class WcvManager {
       });
     });
 
-    // Allow all permissions
-    view.webContents.session.setPermissionRequestHandler((_wc, _perm, cb) => cb(true));
-    view.webContents.session.setPermissionCheckHandler(() => true);
+    // Allow all permissions — with detailed logging for debugging auth issues
+    view.webContents.session.setPermissionRequestHandler((_wc, permission, cb, details) => {
+      safeLog(`[${id}:permission-request] ${permission}`, JSON.stringify(details || {}));
+      cb(true);
+    });
+    view.webContents.session.setPermissionCheckHandler((_wc, permission, _origin, details) => {
+      safeLog(`[${id}:permission-check] ${permission}`, JSON.stringify(details || {}));
+      return true;
+    });
+
+    // Handle device selection for WebAuthn/FIDO2 hardware keys
+    view.webContents.session.setDevicePermissionHandler((_details) => {
+      safeLog(`[${id}:device-permission]`, JSON.stringify(_details || {}));
+      return true;
+    });
 
     // Log ALL console messages from embedded pages for debugging
     view.webContents.on('console-message', (_event, level, message, line, sourceId) => {
