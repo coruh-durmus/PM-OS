@@ -1,6 +1,27 @@
 import { marked } from 'marked';
+import { slugify } from '../shared/markdown-slug.js';
+import {
+  emitActiveFile,
+  SCROLL_TO_ANCHOR_EVENT,
+  SCROLL_TO_LINE_EVENT,
+  type ScrollToAnchorDetail,
+  type ScrollToLineDetail,
+} from '../shared/active-file-event.js';
 
 marked.setOptions({ gfm: true, breaks: true });
+
+// marked v15 dropped the built-in slugger, so headings render without `id`
+// attributes. We override the heading renderer to inject ids that line up
+// with OutlinePanel's slugify() for click-to-scroll.
+marked.use({
+  renderer: {
+    heading(token: any): string {
+      const inline = (this as any).parser?.parseInline?.(token.tokens) ?? token.text;
+      const id = slugify(token.text);
+      return `<h${token.depth} id="${id}">${inline}</h${token.depth}>\n`;
+    },
+  },
+});
 
 export class FileViewerPanel {
   private el: HTMLElement;
@@ -23,6 +44,8 @@ export class FileViewerPanel {
 
   constructor(container: HTMLElement) {
     this.el = container;
+    window.addEventListener(SCROLL_TO_ANCHOR_EVENT, this.onScrollToAnchor as EventListener);
+    window.addEventListener(SCROLL_TO_LINE_EVENT, this.onScrollToLine as EventListener);
   }
 
   render(): void {
@@ -45,7 +68,35 @@ export class FileViewerPanel {
     empty.appendChild(emptyText);
 
     this.el.appendChild(empty);
+
+    // Notify Outline/Timeline that no file is active.
+    emitActiveFile({ path: null, content: null, isMarkdown: false });
   }
+
+  private onScrollToAnchor = (event: Event): void => {
+    const detail = (event as CustomEvent<ScrollToAnchorDetail>).detail;
+    if (!detail?.slug || !this.renderedEl) return;
+    if (this.mode !== 'rendered' && this.mode !== 'split') return;
+    const target = this.renderedEl.querySelector('#' + CSS.escape(detail.slug));
+    if (target) (target as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  private onScrollToLine = (event: Event): void => {
+    const detail = (event as CustomEvent<ScrollToLineDetail>).detail;
+    if (!detail || !this.contentEl) return;
+    const textarea = this.contentEl.querySelector('textarea');
+    if (!textarea) return;
+    const lineHeight = 13 * 1.6;
+    textarea.scrollTop = Math.max(0, (detail.line - 1) * lineHeight);
+    // Place the cursor on the target line (handy after click-to-jump).
+    const lines = textarea.value.split('\n');
+    let pos = 0;
+    for (let i = 0; i < Math.min(detail.line - 1, lines.length); i++) {
+      pos += lines[i].length + 1;
+    }
+    textarea.focus();
+    textarea.setSelectionRange(pos, pos);
+  };
 
   async loadFile(filePath: string): Promise<void> {
     // 1. Read file
@@ -63,6 +114,13 @@ export class FileViewerPanel {
     this.currentSource = content;
     this.isMarkdown = fileName.endsWith('.md');
     this.hasUnsavedChanges = false;
+
+    // Notify Outline/Timeline that the active file changed.
+    emitActiveFile({
+      path: this.currentPath,
+      content: this.currentSource,
+      isMarkdown: this.isMarkdown,
+    });
 
     // Track this file as an open tab
     if (!this.openTabs.find(t => t.path === filePath)) {

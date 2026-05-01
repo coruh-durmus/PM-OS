@@ -8,8 +8,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 pnpm install                     # Install all workspace dependencies
 pnpm build                       # Build everything (packages → extensions → apps)
 pnpm dev                         # Build + launch Electron app
-pnpm dev:watch                   # Build + launch with auto-rebuild on renderer changes (Cmd+R to refresh)
-pnpm test                        # Run all tests (~84 tests across 14 suites)
+pnpm --filter @pm-os/desktop dev:watch   # Build + launch with auto-rebuild on renderer changes (Cmd+R to refresh)
+pnpm test                        # Run all tests across workspaces
 pnpm clean                       # Remove all dist/ directories
 
 # Desktop app only (from apps/desktop/)

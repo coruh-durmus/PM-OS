@@ -163,3 +163,33 @@
   vertical-align: middle;
   opacity: 0.5;
 }
+
+.status-bar-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px;
+  height: 22px;
+  cursor: default;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  color: var(--text-muted);
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.status-bar-item.clickable { cursor: pointer; }
+.status-bar-item.clickable:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.status-bar-item .codicon { font-size: 12px; }
+.status-bar-item .status-bar-text:empty { display: none; }
+
+@keyframes statusbar-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.status-bar-item.spinning .codicon {
+  animation: statusbar-spin 1s linear infinite;
+}

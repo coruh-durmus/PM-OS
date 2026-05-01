@@ -6,6 +6,10 @@ export function setMainWebContents(wc: any): void {
   mainWebContents = wc;
 }
 
+export function getMainWebContents(): any {
+  return mainWebContents;
+}
+
 // Message functions — log to console for now, IPC integration added later
 export function showInformationMessage(message: string, ...items: string[]): Promise<string | undefined> {
   console.log(`[ext:info] ${message}`);

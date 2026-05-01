@@ -484,6 +484,36 @@ export function registerIpcHandlers(
     } catch { return []; }
   });
 
+  ipcMain.handle('git:log-file', async (_e, projectPath: string, filePath: string, limit: number = 50) => {
+    const { execFileSync } = require('child_process');
+    try {
+      const out: string = execFileSync(
+        'git',
+        ['log', '--pretty=format:%H%x1f%s%x1f%ar%x1f%an', '-n', String(limit), '--', filePath],
+        { cwd: projectPath, encoding: 'utf-8', maxBuffer: 5 * 1024 * 1024, timeout: 10000 },
+      );
+      return out.split('\n').filter(Boolean).map((line: string) => {
+        const [hash, subject, relTime, author] = line.split('\x1f');
+        return { hash, subject, relTime, author };
+      });
+    } catch {
+      return [];
+    }
+  });
+
+  ipcMain.handle('git:show-file-diff', async (_e, projectPath: string, hash: string, filePath: string) => {
+    const { execFileSync } = require('child_process');
+    try {
+      return execFileSync(
+        'git',
+        ['show', hash, '--', filePath],
+        { cwd: projectPath, encoding: 'utf-8', maxBuffer: 5 * 1024 * 1024, timeout: 10000 },
+      );
+    } catch {
+      return '';
+    }
+  });
+
   // MCP health check — reads Claude Code's global .mcp.json
   ipcMain.handle('mcp:check-installed', async () => {
     const fs = require('fs');

@@ -114,6 +114,12 @@ const api = {
     statusFiles(projectPath: string): Promise<{ status: string; path: string }[]> {
       return ipcRenderer.invoke('git:status-files', projectPath);
     },
+    logFile(projectPath: string, filePath: string, limit?: number): Promise<{ hash: string; subject: string; relTime: string; author: string }[]> {
+      return ipcRenderer.invoke('git:log-file', projectPath, filePath, limit);
+    },
+    showFileDiff(projectPath: string, hash: string, filePath: string): Promise<string> {
+      return ipcRenderer.invoke('git:show-file-diff', projectPath, hash, filePath);
+    },
   },
   mcp: {
     getConfig: (projectPath: string) => ipcRenderer.invoke('mcp:get-config', projectPath),
@@ -168,6 +174,11 @@ const api = {
       const listener = (_event: any, data: any) => callback(data);
       ipcRenderer.on('statusbar:remove', listener);
       return () => ipcRenderer.removeListener('statusbar:remove', listener);
+    },
+    onDiagnosticsCounts(callback: (data: { errors: number; warnings: number }) => void): () => void {
+      const listener = (_event: any, data: { errors: number; warnings: number }) => callback(data);
+      ipcRenderer.on('diagnostics:counts', listener);
+      return () => ipcRenderer.removeListener('diagnostics:counts', listener);
     },
     getCommands(): Promise<any[]> {
       return ipcRenderer.invoke('extension:get-commands');

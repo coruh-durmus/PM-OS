@@ -2,6 +2,13 @@ import { ProjectsPanel } from '../internal-panels/projects-panel.js';
 import { ExtensionStorePanel } from '../internal-panels/extension-store-panel.js';
 import { SearchPanel } from '../internal-panels/search-panel.js';
 import { SourceControlPanel } from '../internal-panels/source-control-panel.js';
+import { OutlinePanel } from '../internal-panels/outline-panel.js';
+import { TimelinePanel } from '../internal-panels/timeline-panel.js';
+import { SidebarSection } from './sidebar-section.js';
+
+interface DisposablePanel {
+  dispose?: () => void;
+}
 
 export class SidebarPanel {
   private el: HTMLElement;
@@ -10,6 +17,11 @@ export class SidebarPanel {
   private visible = false;
   private activeView: string | null = null;
   private onOpenFile?: (entry: { name: string; path: string; isDirectory: boolean }) => void;
+
+  private mountedPanels: DisposablePanel[] = [];
+  private projectsPanel: ProjectsPanel | null = null;
+  private timelineSection: SidebarSection | null = null;
+  private workspaceSection: SidebarSection | null = null;
 
   constructor(el: HTMLElement, options?: { onOpenFile?: (entry: { name: string; path: string; isDirectory: boolean }) => void }) {
     this.el = el;
@@ -31,7 +43,7 @@ export class SidebarPanel {
     this.el.classList.remove('hidden');
     this.visible = true;
     this.activeView = viewId;
-    this.renderView(viewId);
+    void this.renderView(viewId);
   }
 
   hide(): void {
@@ -43,16 +55,28 @@ export class SidebarPanel {
     return this.visible;
   }
 
+  private disposeMountedPanels(): void {
+    for (const panel of this.mountedPanels) {
+      try { panel.dispose?.(); } catch {}
+    }
+    this.mountedPanels = [];
+    this.projectsPanel = null;
+    this.timelineSection = null;
+    this.workspaceSection = null;
+  }
+
   private async renderView(viewId: string): Promise<void> {
-    // Clear existing content safely
+    // Tear down previous view's panel listeners before clearing the DOM so
+    // event subscriptions don't leak across view switches.
+    this.disposeMountedPanels();
+
     while (this.contentEl.firstChild) {
       this.contentEl.removeChild(this.contentEl.firstChild);
     }
 
     switch (viewId) {
       case 'projects': {
-        const panel = new ProjectsPanel(this.contentEl, { onOpenFile: this.onOpenFile });
-        await panel.render();
+        await this.renderProjectsAccordion();
         break;
       }
       case 'extensions': {
@@ -77,6 +101,59 @@ export class SidebarPanel {
         this.contentEl.appendChild(placeholder);
       }
     }
+  }
+
+  private async renderProjectsAccordion(): Promise<void> {
+    // Use a flex column so the workspace section can grow and the others
+    // stay at their content height (matches VS Code's Explorer view).
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText = 'display: flex; flex-direction: column; height: 100%; min-height: 0;';
+    this.contentEl.appendChild(wrapper);
+
+    // ── Workspace section ─────────────────────────────────────────────
+    const workspaceSection = new SidebarSection({
+      id: 'workspace',
+      title: 'Workspace',
+      growToFill: true,
+    });
+    wrapper.appendChild(workspaceSection.el);
+    this.workspaceSection = workspaceSection;
+
+    const projectsPanel = new ProjectsPanel(workspaceSection.contentEl, {
+      onOpenFile: this.onOpenFile,
+      inSection: true,
+    });
+    this.projectsPanel = projectsPanel;
+    this.mountedPanels.push(projectsPanel);
+    await projectsPanel.render();
+    workspaceSection.setActions(projectsPanel.getActions());
+
+    // ── Outline section ───────────────────────────────────────────────
+    const outlineSection = new SidebarSection({
+      id: 'outline',
+      title: 'Outline',
+      defaultCollapsed: true,
+    });
+    wrapper.appendChild(outlineSection.el);
+
+    const outlinePanel = new OutlinePanel(outlineSection.contentEl);
+    this.mountedPanels.push(outlinePanel);
+
+    // ── Timeline section ──────────────────────────────────────────────
+    const timelineSection = new SidebarSection({
+      id: 'timeline',
+      title: 'Timeline',
+      defaultCollapsed: true,
+    });
+    wrapper.appendChild(timelineSection.el);
+    this.timelineSection = timelineSection;
+
+    const timelinePanel = new TimelinePanel(timelineSection.contentEl, {
+      onActiveFileNameChanged: (filename) => {
+        this.timelineSection?.setSubtitle(filename);
+      },
+    });
+    this.mountedPanels.push(timelinePanel);
   }
 
   private setupResize(): void {

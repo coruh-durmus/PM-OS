@@ -1,7 +1,13 @@
 import { ExplorerPanel } from './explorer-panel.js';
+import type { SidebarSectionAction } from '../sidebar-panel/sidebar-section.js';
 
 interface ProjectsPanelOptions {
   onOpenFile?: (entry: { name: string; path: string; isDirectory: boolean }) => void;
+  /**
+   * When true the inner ExplorerPanel skips rendering its own header so the
+   * surrounding SidebarSection can host the title + action buttons.
+   */
+  inSection?: boolean;
 }
 
 export class ProjectsPanel {
@@ -9,6 +15,7 @@ export class ProjectsPanel {
   private disposeWorkspaceListener: (() => void) | null = null;
   private options: ProjectsPanelOptions;
   private rendering = false;
+  private explorer: ExplorerPanel | null = null;
 
   constructor(container: HTMLElement, options?: ProjectsPanelOptions) {
     this.el = container;
@@ -39,6 +46,7 @@ export class ProjectsPanel {
       }
 
       if (!workspaceOpen) {
+        this.explorer = null;
         this.renderNoWorkspace();
         return;
       }
@@ -48,8 +56,11 @@ export class ProjectsPanel {
       treeContainer.style.cssText = 'flex: 1; overflow-y: auto;';
       this.el.appendChild(treeContainer);
 
-      const explorer = new ExplorerPanel(treeContainer, { onOpenFile: this.options.onOpenFile });
-      await explorer.render();
+      this.explorer = new ExplorerPanel(treeContainer, {
+        onOpenFile: this.options.onOpenFile,
+        inSection: this.options.inSection,
+      });
+      await this.explorer.render();
     } finally {
       this.rendering = false;
     }
@@ -58,6 +69,24 @@ export class ProjectsPanel {
     this.disposeWorkspaceListener = (window as any).pmOs.workspace.onChanged(() => {
       this.render();
     });
+  }
+
+  /**
+   * Forwarded to the underlying ExplorerPanel so the SidebarSection header
+   * can host search + add-folder actions when running in accordion mode.
+   * Returns an empty list when no workspace is open.
+   */
+  getActions(): SidebarSectionAction[] {
+    return this.explorer?.getActions() ?? [];
+  }
+
+  dispose(): void {
+    if (this.disposeWorkspaceListener) {
+      this.disposeWorkspaceListener();
+      this.disposeWorkspaceListener = null;
+    }
+    this.explorer?.dispose();
+    this.explorer = null;
   }
 
   private renderNoWorkspace(): void {

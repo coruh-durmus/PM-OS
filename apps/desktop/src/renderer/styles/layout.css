@@ -110,6 +110,96 @@
   background: var(--accent);
 }
 
+/* ─── Sidebar sections (accordion within explorer view) ───────────── */
+.sidebar-section {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-top: 1px solid var(--border);
+}
+
+.sidebar-section:first-child { border-top: none; }
+.sidebar-section.grow { flex: 1 1 auto; }
+
+.sidebar-section-header {
+  height: 22px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px 0 4px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  transition: background var(--transition-fast);
+  flex-shrink: 0;
+}
+.sidebar-section-header:hover { background: var(--bg-hover); }
+
+.sidebar-section-header .codicon-chevron-down,
+.sidebar-section-header .codicon-chevron-right {
+  font-size: 12px;
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.sidebar-section-title {
+  flex-shrink: 0;
+}
+
+.sidebar-section-subtitle {
+  color: var(--text-secondary);
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+  margin-left: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 0 1 auto;
+  min-width: 0;
+  font-size: 11px;
+}
+.sidebar-section-subtitle:empty { display: none; }
+
+.sidebar-section-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.sidebar-section-actions button {
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: color var(--transition-fast), background var(--transition-fast);
+}
+.sidebar-section-actions button:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+.sidebar-section-actions button .codicon { font-size: 14px; }
+
+.sidebar-section-content {
+  overflow-y: auto;
+  min-height: 0;
+  flex: 0 1 auto;
+}
+.sidebar-section.grow > .sidebar-section-content { flex: 1 1 auto; }
+.sidebar-section.collapsed > .sidebar-section-content { display: none; }
+
 #main-area {
   grid-area: main;
   display: flex;
