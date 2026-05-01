@@ -38,9 +38,14 @@ export class ExtensionHost {
   private extensionConfigs: any[] = [];
 
   constructor(extensionsDir?: string) {
-    this.extensionsDir =
-      extensionsDir ??
-      path.join(__dirname, '..', '..', '..', '..', 'extensions');
+    if (extensionsDir) {
+      this.extensionsDir = extensionsDir;
+      return;
+    }
+    const { app } = require('electron');
+    this.extensionsDir = app.isPackaged
+      ? path.join(process.resourcesPath, 'extensions')
+      : path.join(__dirname, '..', '..', '..', '..', 'extensions');
   }
 
   async loadAll(): Promise<void> {

@@ -1,6 +1,8 @@
 {
   "name": "@pm-os/desktop",
-  "version": "0.1.0",
+  "version": "0.1.1",
+  "description": "PMOS — VS Code-style desktop app for project managers with embedded SaaS panels, terminal, and Open VSX extension marketplace.",
+  "author": "Coruh Durmus <coruh.d@gmail.com>",
   "private": true,
   "main": "dist/main/index.js",
   "scripts": {
@@ -11,7 +13,10 @@
     "build:renderer": "esbuild src/renderer/index.ts --bundle --platform=browser --outfile=dist/renderer/index.js --sourcemap",
     "build:css": "cat src/renderer/styles/variables.css src/renderer/styles/reset.css src/renderer/styles/layout.css src/renderer/sidebar/sidebar.css src/renderer/panels/panels.css src/renderer/command-palette/command-palette.css src/renderer/terminal/terminal.css src/renderer/notification-center/notification-center.css src/renderer/onboarding/onboarding.css src/renderer/browser-sidebar/browser-sidebar.css src/renderer/internal-panels/extension-store-panel.css src/renderer/internal-panels/file-viewer-panel.css > dist/renderer/styles.css",
     "build": "mkdir -p dist/renderer && pnpm build:main && pnpm build:preload && pnpm build:renderer && pnpm build:css && cp src/renderer/index.html dist/renderer/index.html && cp node_modules/@xterm/xterm/css/xterm.css dist/renderer/xterm.css && cp node_modules/@vscode/codicons/dist/codicon.css dist/renderer/codicon.css && cp node_modules/@vscode/codicons/dist/codicon.ttf dist/renderer/codicon.ttf && cp ../../logo-dark.svg dist/renderer/logo-dark.svg && cp ../../logo-light.svg dist/renderer/logo-light.svg",
-    "clean": "rm -rf dist"
+    "rebuild:native": "electron-rebuild -f -w node-pty",
+    "package:mac": "pnpm build && pnpm rebuild:native && bash scripts/package-mac.sh",
+    "release": "pnpm package:mac",
+    "clean": "rm -rf dist release"
   },
   "dependencies": {
     "@pm-os/event-bus": "workspace:*",
@@ -26,7 +31,54 @@
   "devDependencies": {
     "@electron/rebuild": "^3.7.0",
     "electron": "^41.0.0",
+    "electron-builder": "^25.0.0",
     "esbuild": "^0.25.0",
     "typescript": "^5.7.0"
+  },
+  "build": {
+    "appId": "com.coruhdurmus.pmos",
+    "productName": "PMOS",
+    "asar": true,
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/**/*",
+      "package.json",
+      "node_modules/node-pty/**/*",
+      "!**/*.map"
+    ],
+    "asarUnpack": [
+      "**/node_modules/node-pty/**/*"
+    ],
+    "extraMetadata": {
+      "dependencies": {
+        "node-pty": "^1.0.0"
+      }
+    },
+    "extraResources": [
+      {
+        "from": "../../extensions",
+        "to": "extensions",
+        "filter": ["**/*", "!**/node_modules/.cache/**", "!**/*.map"]
+      }
+    ],
+    "mac": {
+      "target": [{ "target": "dmg", "arch": ["arm64"] }],
+      "icon": "build/icon.png",
+      "category": "public.app-category.developer-tools",
+      "identity": null,
+      "gatekeeperAssess": false
+    },
+    "dmg": {
+      "title": "PMOS ${version}",
+      "writeUpdateInfo": false,
+      "contents": [
+        { "x": 130, "y": 220 },
+        { "x": 410, "y": 220, "type": "link", "path": "/Applications" }
+      ]
+    },
+    "npmRebuild": false
   }
 }

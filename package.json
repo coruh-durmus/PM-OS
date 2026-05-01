@@ -1,13 +1,14 @@
 {
   "name": "pm-os",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Product Manager Operating System",
   "scripts": {
     "build": "pnpm -r build",
     "dev": "pnpm --filter @pm-os/desktop dev",
     "test": "pnpm -r test",
-    "clean": "pnpm -r clean"
+    "clean": "pnpm -r clean",
+    "release:mac": "pnpm --filter @pm-os/desktop release"
   },
   "engines": { "node": ">=20", "pnpm": ">=9" },
   "pnpm": {
