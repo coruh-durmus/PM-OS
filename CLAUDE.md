@@ -108,6 +108,9 @@ VS Code-style explorer with collapsible workspace root folders. Multi-folder wor
 - **Icons:** Codicon font (`@vscode/codicons`) for all UI icons. Loaded via separate `codicon.css` in HTML. Never use unicode emoji for action icons.
 - **Safe logging:** Main process uses `safeLog`/`safeError` wrappers (try-catch around console calls) to prevent EPIPE crashes from broken PTY pipes.
 - **Inline UI:** `prompt()` and `alert()` don't work in Electron renderer — always use custom inline DOM elements for user input.
+- **Renderer events:** Cross-panel signals in the renderer use `window.dispatchEvent(new CustomEvent('pm-os:<name>', { detail }))` (e.g. `pm-os:active-file`, `pm-os:scroll-to-anchor`, `pm-os:open-terminal-in-folder`). Centralize event names + payload types in `apps/desktop/src/renderer/shared/`. The `EventBus` in `packages/event-bus` is for main-process use.
+- **Panel disposal:** Internal panels mounted by `SidebarPanel` (`apps/desktop/src/renderer/internal-panels/`) must implement `dispose()` if they subscribe to `window` events or workspace listeners. `SidebarPanel.renderView` calls it before clearing children to prevent leaks across view switches.
+- **Import paths:** Relative imports in `apps/desktop` use `.js` suffix despite `.ts` source files (TS `bundler` resolution + esbuild rewrite at build time).
 
 ## Gotchas
 
@@ -128,3 +131,6 @@ VS Code-style explorer with collapsible workspace root folders. Multi-folder wor
 - Browser toolbar height (32px) must be accounted for in `getBounds()` — WebContentsView starts below the toolbar
 - Browser sidebar CSS has `top: 32px` to sit below the toolbar — don't set to `top: 0`
 - vscode-shim `require.resolve('./vscode-shim/index')` generates a benign esbuild warning — the shim is bundled correctly
+- `marked@15` removed its built-in slugger — heading tags render without `id` attributes. Inject anchors via `marked.use({ renderer: { heading(token) { … } } })` and `slugify(token.text)` (see `apps/desktop/src/renderer/shared/markdown-slug.ts`).
+- `tsc --noEmit` from `apps/desktop` currently fails with "Cannot find type definition file for 'node'" because pnpm doesn't hoist `@types/node` into the package's `node_modules`. Use `pnpm build` (esbuild) to validate; a fast sanity check that new modules made it into the bundle is `grep -c "<symbol>" apps/desktop/dist/{renderer,preload,main}/index.js`.
+- Adding a new `.css` file in `apps/desktop/src/renderer/` requires updating the `build:css` script in `apps/desktop/package.json` — it `cat`s a hard-coded list, files outside that list are never bundled.
