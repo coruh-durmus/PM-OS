@@ -26,6 +26,26 @@ cd packages/event-bus && pnpm test
 cd apps/desktop && npx @electron/rebuild -f -w node-pty
 ```
 
+## Releasing the Mac DMG
+
+`pnpm package:mac` (from `apps/desktop/`) produces a signed + notarized DMG at `apps/desktop/release/PMOS-<version>-arm64.dmg`. It reads `apps/desktop/.env` for `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID` (gitignored).
+
+**Whenever a new DMG is built, publish it as a GitHub release** — never leave a built DMG sitting locally. Default flow:
+
+1. Bump `version` in `apps/desktop/package.json` (and root `package.json` if mirrored).
+2. Build: `cd apps/desktop && pnpm package:mac`.
+3. Commit the version bump, tag, push:
+   ```
+   git tag v<version> && git push && git push --tags
+   ```
+4. Create the release with the DMG attached:
+   ```
+   gh release create v<version> apps/desktop/release/PMOS-<version>-arm64.dmg \
+     --title "PMOS <version>" --notes "..."
+   ```
+
+If a build replaces an existing tag's asset (e.g., re-cutting the same version after a fix), use `gh release upload v<version> <dmg> --clobber` and update the release notes if the previous text is now wrong.
+
 ## Architecture
 
 Custom Electron desktop app (Electron 41+, Chromium 146+) with a plugin-based extension system, VS Code extension compatibility, and Open VSX marketplace integration. Three layers communicate via IPC:
