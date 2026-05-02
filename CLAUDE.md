@@ -28,12 +28,12 @@ cd apps/desktop && npx @electron/rebuild -f -w node-pty
 
 ## Releasing the Mac DMG
 
-`pnpm package:mac` (from `apps/desktop/`) produces a signed + notarized DMG at `apps/desktop/release/PMOS-<version>-arm64.dmg`. It reads `apps/desktop/.env` for `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID` (gitignored).
+`pnpm release:mac` (from repo root) produces a signed + notarized DMG at `apps/desktop/release/PMOS-<version>-arm64.dmg`. It reads `apps/desktop/.env` for `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID` (gitignored).
 
 **Whenever a new DMG is built, publish it as a GitHub release** — never leave a built DMG sitting locally. Default flow:
 
-1. Bump `version` in `apps/desktop/package.json` (and root `package.json` if mirrored).
-2. Build: `cd apps/desktop && pnpm package:mac`.
+1. Bump `version` in `apps/desktop/package.json` and root `package.json`.
+2. Build: `pnpm release:mac`.
 3. Commit the version bump, tag, push:
    ```
    git tag v<version> && git push && git push --tags
@@ -45,6 +45,17 @@ cd apps/desktop && npx @electron/rebuild -f -w node-pty
    ```
 
 If a build replaces an existing tag's asset (e.g., re-cutting the same version after a fix), use `gh release upload v<version> <dmg> --clobber` and update the release notes if the previous text is now wrong.
+
+The `/release-mac` slash command (in `.claude/skills/release-mac/`) automates this flow — it's user-only, so the user must invoke it explicitly.
+
+## Claude automations in this repo
+
+- **`.mcp.json`** — project-scoped MCP servers: `context7` (live docs for Electron, Anthropic SDK, marked, etc.) and `playwright` (browser automation for renderer testing).
+- **`.claude/skills/release-mac/`** — user-only slash command for releasing the Mac DMG end-to-end (version bump → build → notarize → tag → GitHub release).
+- **`.claude/skills/add-extension/`** — scaffold a new bundled extension matching the CJS/esbuild contract.
+- **`.claude/agents/electron-security-reviewer.md`** — specialized reviewer for Electron-specific issues (`contextIsolation`, IPC validation, `WebContentsView` partition isolation, OAuth popup handling, extension host privileges). Invoke after changes to `apps/desktop/src/main/`, `src/preload/`, or `vscode-shim/`.
+- **`.claude/hookify.protect-release-config.local.md`** — warns before edits to `.env`, `entitlements.mac.plist`, or `apps/desktop/package.json`.
+- **`.claude/hookify.update-claude-md-before-commit.local.md`** — warns before `git commit` to ensure CLAUDE.md is up to date.
 
 ## Architecture
 

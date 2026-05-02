@@ -34,6 +34,6 @@ cd apps/desktop && npx @electron/rebuild -f -w node-pty
 Package a signed + notarized DMG (arm64). Requires `apps/desktop/.env` with `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, and `APPLE_TEAM_ID`:
 
 ```bash
-cd apps/desktop && pnpm package:mac
+pnpm release:mac
 # output: apps/desktop/release/PMOS-<version>-arm64.dmg
 ```
