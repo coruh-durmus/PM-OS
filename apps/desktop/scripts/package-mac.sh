@@ -11,6 +11,12 @@
 set -e
 cd "$(dirname "$0")/.."
 
+if [ -f .env ]; then
+  set -a
+  . ./.env
+  set +a
+fi
+
 cleanup() {
   ( cd ../.. && pnpm install --silent ) >/dev/null 2>&1 || true
 }

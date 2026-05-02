@@ -61,15 +61,26 @@
       {
         "from": "../../extensions",
         "to": "extensions",
-        "filter": ["**/*", "!**/node_modules/.cache/**", "!**/*.map"]
+        "filter": [
+          "**/*",
+          "!**/node_modules/**",
+          "!**/src/**",
+          "!**/__tests__/**",
+          "!**/tsconfig*.json",
+          "!**/vitest.config.*",
+          "!**/*.map"
+        ]
       }
     ],
     "mac": {
       "target": [{ "target": "dmg", "arch": ["arm64"] }],
       "icon": "build/icon.png",
       "category": "public.app-category.developer-tools",
-      "identity": null,
-      "gatekeeperAssess": false
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "notarize": true
     },
     "dmg": {
       "title": "PMOS ${version}",
