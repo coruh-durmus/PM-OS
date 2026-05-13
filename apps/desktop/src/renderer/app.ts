@@ -65,6 +65,7 @@ export class App {
 
     this.themeManager = new ThemeManager();
     this.themePicker = new ThemePicker(this.themeManager);
+    this.themeManager.onChange(() => this.bottomPanel.applyTheme());
 
     this.commandPalette.addCommand({
       id: 'change-theme',

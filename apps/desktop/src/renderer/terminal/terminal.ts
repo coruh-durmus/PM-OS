@@ -1,6 +1,74 @@
-import { Terminal as XTerm } from '@xterm/xterm';
+import { Terminal as XTerm, ITheme } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
+
+function readCssVar(name: string): string {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+function hexLuminance(hex: string): number {
+  const c = hex.replace('#', '');
+  if (c.length !== 6) return 0;
+  const r = parseInt(c.slice(0, 2), 16) / 255;
+  const g = parseInt(c.slice(2, 4), 16) / 255;
+  const b = parseInt(c.slice(4, 6), 16) / 255;
+  if ([r, g, b].some(Number.isNaN)) return 0;
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+export function deriveTerminalTheme(): ITheme {
+  const bg = readCssVar('--bg-primary') || '#1e1e2e';
+  const fg = readCssVar('--text-primary') || '#cdd6f4';
+  const accent = readCssVar('--accent') || '#89b4fa';
+  const hover = readCssVar('--bg-hover') || '#45475a';
+  const error = readCssVar('--error') || '#f38ba8';
+  const success = readCssVar('--success') || '#a6e3a1';
+  const warning = readCssVar('--warning') || '#f9e2af';
+  const muted = readCssVar('--text-muted') || '#6c7086';
+  const isLight = hexLuminance(bg) > 0.5;
+
+  const common = {
+    background: bg,
+    foreground: fg,
+    cursor: accent,
+    cursorAccent: bg,
+    selectionBackground: hover,
+    selectionForeground: fg,
+    red: error,
+    green: success,
+    yellow: warning,
+    blue: accent,
+    brightRed: error,
+    brightGreen: success,
+    brightYellow: warning,
+    brightBlue: accent,
+  };
+
+  if (isLight) {
+    return {
+      ...common,
+      black: '#5c5f77',
+      magenta: '#8839ef',
+      cyan: '#179299',
+      white: '#acb0be',
+      brightBlack: muted,
+      brightMagenta: '#8839ef',
+      brightCyan: '#179299',
+      brightWhite: '#4c4f69',
+    };
+  }
+  return {
+    ...common,
+    black: hover,
+    magenta: '#cba6f7',
+    cyan: '#94e2d5',
+    white: '#bac2de',
+    brightBlack: muted,
+    brightMagenta: '#cba6f7',
+    brightCyan: '#94e2d5',
+    brightWhite: fg,
+  };
+}
 
 export class TerminalPanel {
   private terminal: XTerm;
@@ -17,30 +85,7 @@ export class TerminalPanel {
       cursorBlink: true,
       fontSize: 13,
       fontFamily: "'SF Mono', 'Fira Code', 'Cascadia Code', 'Menlo', monospace",
-      theme: {
-        background: '#1e1e2e',
-        foreground: '#cdd6f4',
-        cursor: '#f5e0dc',
-        cursorAccent: '#1e1e2e',
-        selectionBackground: '#45475a',
-        selectionForeground: '#cdd6f4',
-        black: '#45475a',
-        red: '#f38ba8',
-        green: '#a6e3a1',
-        yellow: '#f9e2af',
-        blue: '#89b4fa',
-        magenta: '#cba6f7',
-        cyan: '#94e2d5',
-        white: '#bac2de',
-        brightBlack: '#585b70',
-        brightRed: '#f38ba8',
-        brightGreen: '#a6e3a1',
-        brightYellow: '#f9e2af',
-        brightBlue: '#89b4fa',
-        brightMagenta: '#cba6f7',
-        brightCyan: '#94e2d5',
-        brightWhite: '#a6adc8',
-      },
+      theme: deriveTerminalTheme(),
       allowProposedApi: true,
     });
 
@@ -110,6 +155,10 @@ export class TerminalPanel {
 
   fit(): void {
     try { this.fitAddon.fit(); } catch {}
+  }
+
+  applyCurrentTheme(): void {
+    this.terminal.options.theme = deriveTerminalTheme();
   }
 
   clear(): void {

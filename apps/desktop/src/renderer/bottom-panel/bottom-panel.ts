@@ -126,6 +126,12 @@ export class BottomPanel {
 
   get isVisible(): boolean { return this.visible; }
 
+  applyTheme(): void {
+    for (const tab of this.tabs) {
+      tab.panel.applyCurrentTheme();
+    }
+  }
+
   async createNewTerminal(shell?: string, forceCwd?: string): Promise<void> {
     // If multiple workspace folders and no cwd specified, ask the user to pick
     if (!forceCwd) {
